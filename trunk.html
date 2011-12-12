@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  </head>
+  <body>
+    <script src="processing.js"></script>
+    <canvas id="canvas" width="600" height="400" style="border: 1px solid black"></canvas>
+    <script type="text/javascript">
+      function sketchProc(p) {
+        function rand(max, min) {
+          max = max || 100;
+          min = min || 0;
+
+          return Math.floor(min + (1 + max - min) * Math.random());
+        }
+
+        function branch(x1, y1, x2, y2, pc, side) {
+          var px = p.bezierPoint(x1, x1, x2, x2, pc);
+          var py = p.bezierPoint(y1, y1, y2, y2, pc);
+
+          var tx = p.bezierTangent(x1, x1, x2, x2, pc);
+          var ty = p.bezierTangent(y1, y1, y2, y2, pc);
+
+          var r = 0;
+          do {
+            r = Math.random();
+          } while (r < 0.2 || r > 0.3)
+
+          if (side == -1) {
+            r = 1 - r;
+          }
+
+          var a = p.atan2(ty, tx);
+          a += p.PI * r;
+
+          var d = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1)) * side * 0.3;
+          var nx = px + p.cos(a) * d;
+          var ny = py + p.sin(a) * d;
+
+          return [px, py, nx, ny];
+        }
+
+        p.setup = function() {
+          p.size(300, 300);
+          p.background(255);
+          p.noFill();
+
+          var x = 150;
+          var y1 = 300;
+          var y2 = 50;
+
+          var points = [150, 300, 150, 50];
+            
+          for each (var side in [1, -1]) {
+            for (var i = 0; i < 6; i++) {
+              var pc = 0;
+              do {
+                pc = Math.random();
+              } while (pc < 0.4 || pc > 0.8)
+
+              p.bezier(points[0], points[1], points[0], points[1], points[2], points[3], points[2], points[3]);
+              points = branch(x, y1, x, y2, pc, side);
+            }
+          }
+        }
+      }
+      var canvas = document.getElementById('canvas');
+      var ctx = canvas.getContext('2d');
+      new Processing(canvas, sketchProc);
+      
+    </script>
+  </body>
+</html>

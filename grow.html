@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  </head>
+  <body>
+    <canvas id="canvas" width="300" height="300" style="border: 1px solid black"></canvas>
+    <script type="text/javascript">
+
+  /*
+          var x = 150;
+          var x2 = 0;
+          var y1 = 0;
+          var y2 = 0;
+          var c = 1;
+
+          var dstart = y1 - 15;
+          var d = dstart;
+
+            y2 -= 1;
+            x2 += 0.05;
+
+            p.triangle(x - (x2 / 2), y1, x, y2, x + (x2 / 2), y1);
+
+            if (y2 < dstart) {
+              d -= Math.pow(Math.abs(y2 - dstart), -0.35);
+              p.line(20, d, 280, d);
+            }
+  */
+
+      function Tree(x, y, rotation, depth) {
+          this.start_x = x;
+          this.start_y = y;
+
+          this.rotation = 0;
+          this.depth = 1;
+          this.max_age = 250;
+          this.scale = 1;
+
+          this.age = 0;
+          this.children = [];
+      }
+      Tree.prototype = {
+          draw: function(ctx) {
+              if (this.age < this.max_age) {
+                  this.age += 1;
+
+                  if (this.should_branch()) {
+                      var t = this.branch();
+                      t.rotation = -0.5;
+
+                      var t = this.branch();
+                      t.rotation = 0.5;
+                  }
+              }
+
+              ctx.save();
+
+              ctx.translate(this.start_x, this.start_y);
+              ctx.rotate(this.rotation);
+
+              ctx.strokeStyle = "rgb(54, 30, 0)";
+              ctx.beginPath();
+              ctx.moveTo(0, 0);
+              ctx.lineTo(0, this.age);
+              ctx.stroke();
+
+              if (this.has_leaves()) {
+                  ctx.save();
+
+                  ctx.fillStyle = "rgb(0, 120, 52)";
+                  ctx.beginPath();
+                  ctx.arc(0, this.age, 2, 0, Math.PI * 2, true);
+                  ctx.closePath();
+                  ctx.fill();
+
+                  ctx.restore();
+              }
+
+              for (var i = 0; i < this.children.length; i++) {
+                  this.children[i].draw(ctx);
+              }
+
+              ctx.restore();
+          },
+          has_leaves: function() {
+              return this.depth == 3;
+          },
+          branch: function() {
+              var t = new Tree(0, this.age);
+              t.rotation = Math.PI * 1.9;
+              t.depth = this.depth + 1;
+              t.max_age = (this.max_age - this.age) / 2;
+              this.children.push(t);
+              return t;
+          },
+          should_branch: function() {
+              return this.depth < 3 && this.age > (this.age / 4)
+                     && this.age % (50 / this.depth) == 0;
+          } 
+      }
+
+      var tree = new Tree(150, 0);
+      var canvas = document.getElementById('canvas');
+      var ctx = canvas.getContext('2d');
+
+      // Transform to the cartesian coordinate system.
+      // I find it easier to work with for growing trees from bottom to top
+      ctx.translate(0, canvas.height);
+      ctx.scale(1, -1);
+
+      var drawInterval = setInterval(function() {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          tree.draw(ctx);
+      }, 10);
+
+    </script>
+  </body>
+</html>
