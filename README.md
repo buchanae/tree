@@ -1,13 +1,5 @@
-[boilerplate for three.js](https://github.com/jeromeetienne/threejsboilerplate)
-is a template to get you started. You download it and modify it until it fits your needs.
-It is a fast way to start a clean project with [three.js](https://github.com/mrdoob/three.js/).
-It avoids repetitive tasks, following DRY principles.
-It includes various good practices and compatibilities features.
-More details [here](http://learningthreejs.com/blog/2011/12/20/boilerplate-for-three-js/).
+Draw a 3D tree with an algorithm with WebGL.
 
-# Get Started
-```
-git clone https://github.com/jeromeetienne/threejsboilerplate.git
-```
+An experiment with WebGL, require.js, three.js, underscore.js, qunit, and probably more.
 
-And start updating ```index.html``` until it fits yours need.
+This is very much a hacked-up side project, so it's likely many things are broken.
