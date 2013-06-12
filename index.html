@@ -3,51 +3,14 @@
   <head>
   </head>
   <body>
-    <script src="processing.js"></script>
-    <script src="algoTree.js"></script>
     <canvas id="canvas" width="600" height="400" style="border: 1px solid black"></canvas>
+
     <script type="text/javascript">
-      function sketchProc(processing) {
-        function rand(max, min) {
-          max = max || 100;
-          min = min || 0;
 
-          return Math.floor(min + (1 + max - min) * Math.random());
-        }
-        function dot() {
-          var colors = [
-            [168, 216, 72],
-            [71, 160, 46],
-            [147, 198, 126],
-            [84, 178, 87],
-            [207, 218, 69]
-          ];
-
-          var max = 50;
-          var min = 20;
-          var r = rand(30, 10);
-          var x = rand(200);
-          var y = rand(200);
-          var c = rand(4);
-          processing.fill(colors[c][0], colors[c][1], colors[c][2]);
-          processing.ellipse(x, y, r, r);
-        }
-
-        processing.setup = function() {
-          processing.size(300, 300);
-          processing.background(255);
-            processing.background(255);
-            processing.noStroke();
-
-            for (var i = 0; i < 100; i++) {
-              dot();
-            }
-        }
-      }
       var canvas = document.getElementById('canvas');
       var ctx = canvas.getContext('2d');
-      tree.draw(ctx, 400, 400);
-      //var p = new Processing(canvas, sketchProc);
+
+
       
     </script>
   </body>
