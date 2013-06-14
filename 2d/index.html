@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  </head>
+  <body>
+    <canvas id="canvas" width="600" height="600" style="border: 1px solid black; float: left;"></canvas>
+    <img src='http://science.halleyhosting.com/nature/gorge/tree/conifer/pseudo/menziesii4a.jpg' style='float: left; width: 500px;'/>
+    <!--<img src='http://www.treeinabox.com/kz-content/images/pages/images/douglas%20fir%20young%201a.jpg' style='float: left; width: 500px;'/>-->
+
+    <script type="text/javascript">
+
+      var canvas = document.getElementById('canvas');
+      var ctx = canvas.getContext('2d');
+      // flip the coordinate system because it makes more sense (to me)
+      // to draw trees from the ground up.
+      ctx.scale(1, -1);
+      ctx.translate(0, -600);
+
+      // trunk
+      var w = 10;
+      var h = 500;
+
+      ctx.beginPath();
+      ctx.moveTo(300 - w, 0);
+      ctx.lineTo(300, h);
+      ctx.lineTo(300 + w, 0);
+      ctx.fillStyle = 'gray';
+      ctx.fill();
+
+      function draw_leaf(length) {
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(length, 0);
+        var g = Math.floor(Math.random() * (255 - 150)) + 150;
+        //ctx.strokeStyle = 'rgb(0, ' + g + ', 0)';
+        ctx.strokeStyle = 'green';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        for (var i = 5; i < length; i += 5) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.translate(i, 0);
+          ctx.moveTo(0, 0);
+          ctx.rotate(0.5);
+          ctx.lineTo(7, 0);
+          ctx.lineWidth = 1;
+          ctx.stroke();
+          ctx.restore();
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.translate(i, 0);
+          ctx.moveTo(0, 0);
+          ctx.rotate(-0.5);
+          ctx.lineTo(7, 0);
+          ctx.lineWidth = 1;
+          ctx.stroke();
+          ctx.restore();
+
+        }
+      }
+
+      function draw_leaves(length, direction) {
+
+        var min_leaf_angle = 0.1;
+        var max_leaf_angle = 0.3;
+
+        // draw leaves
+        for (var bx = 5; bx <= length; bx += 10) {
+          ctx.save();
+
+          ctx.translate(bx, 0);
+
+          var p = (length - bx) / 4;
+
+          // leaf angle is function of leaf position
+          var z = 1 - (bx / length);
+          var ang = (z * (max_leaf_angle - min_leaf_angle)) + min_leaf_angle;
+
+          ctx.rotate(Math.PI * ang * direction);
+          draw_leaf(p);
+
+          ctx.restore();
+        }
+      }
+
+      function draw_branch(trunk_pos_x, trunk_pos_y, angle, length, direction) {
+
+        var c = length;
+
+        ctx.save();
+        ctx.translate(trunk_pos_x, trunk_pos_y);
+
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.rotate(angle);
+        ctx.lineTo(length, 0);
+        ctx.stroke();
+
+        draw_leaves(length, direction);
+
+
+        ctx.restore();
+      }
+
+      var min_branch_length = 25;
+      var max_branch_length = 200;
+      var branch_base_height = 100;
+
+      function wiggle(val) {
+        return val + (Math.floor(Math.random() * 20) - 10);
+      }
+
+      var min_branch_angle = 0.02;
+      var max_branch_angle = 0.35;
+
+      function draw_branches() {
+
+        for (var i = 0; i + branch_base_height < h - 20; i += 30) {
+          // branch angle is function of branch position
+          var z = i / (h - branch_base_height);
+          var ang = (z * (max_branch_angle - min_branch_angle)) + min_branch_angle;
+
+          // branch length is a function of branch position
+          var z = 1 - (i / (h - branch_base_height));
+          var l = (z * (max_branch_length - min_branch_length)) + min_branch_length;
+
+          // a little branch position wiggle
+          var bh = wiggle(branch_base_height);
+
+          draw_branch(300, i + bh, ang * Math.PI, l, -1);
+
+          // a little branch position wiggle
+          var bh = wiggle(branch_base_height);
+
+          draw_branch(300, i + bh, (1 - ang) * Math.PI, l, 1);
+        }
+      }
+
+      draw_branches();
+      
+    </script>
+  </body>
+</html>
