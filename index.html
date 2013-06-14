@@ -3,7 +3,9 @@
   <head>
   </head>
   <body>
-    <canvas id="canvas" width="600" height="600" style="border: 1px solid black"></canvas>
+    <canvas id="canvas" width="600" height="600" style="border: 1px solid black; float: left;"></canvas>
+    <img src='http://science.halleyhosting.com/nature/gorge/tree/conifer/pseudo/menziesii4a.jpg' style='float: left; width: 500px;'/>
+    <!--<img src='http://www.treeinabox.com/kz-content/images/pages/images/douglas%20fir%20young%201a.jpg' style='float: left; width: 500px;'/>-->
 
     <script type="text/javascript">
 
@@ -15,19 +17,45 @@
       ctx.translate(0, -600);
 
       // trunk
+      var w = 10;
       var h = 500;
 
       ctx.beginPath();
-      ctx.moveTo(300, 0);
+      ctx.moveTo(300 - w, 0);
       ctx.lineTo(300, h);
-      ctx.stroke();
+      ctx.lineTo(300 + w, 0);
+      ctx.fillStyle = 'gray';
+      ctx.fill();
 
-      function draw_branch(trunk_pos_x, trunk_pos_y, angle, length) {
+      function draw_leaf(length) {
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(length, 0);
+        var g = Math.floor(Math.random() * (255 - 150)) + 150;
+        ctx.strokeStyle = 'rgb(0, ' + g + ', 0)';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+      }
+
+      function draw_leaves(length, direction) {
+        // draw leaves
+        for (var bx = 5; bx <= length; bx += 10) {
+          ctx.save();
+
+          ctx.translate(bx, 0);
+
+          var p = (length - bx) / 4;
+
+          ctx.rotate(Math.PI * .5 * direction);
+          draw_leaf(p);
+
+          ctx.restore();
+        }
+      }
+
+      function draw_branch(trunk_pos_x, trunk_pos_y, angle, length, direction) {
 
         var c = length;
-
-        //c2 = (c * Math.cos(angle)) - (d * Math.sin(angle));
-        //d2 = (c * Math.sin(angle)) + (d * Math.cos(angle));
 
         ctx.save();
         ctx.translate(trunk_pos_x, trunk_pos_y);
@@ -38,25 +66,8 @@
         ctx.lineTo(length, 0);
         ctx.stroke();
 
-        // draw leaves
-        for (var bx = 25; bx < length; bx += 25) {
-          ctx.save();
-          ctx.translate(bx, 0);
-          ctx.rotate(.15);
-          ctx.beginPath();
-          ctx.moveTo(0, 0);
-          ctx.lineTo(20, 0);
-          ctx.strokeStyle = 'green';
-          ctx.stroke();
+        draw_leaves(length, direction);
 
-          ctx.rotate(-.30);
-          ctx.beginPath();
-          ctx.moveTo(0, 0);
-          ctx.lineTo(20, 0);
-          ctx.strokeStyle = 'green';
-          ctx.stroke();
-          ctx.restore();
-        }
 
         ctx.restore();
       }
@@ -65,24 +76,33 @@
       var max_branch_length = 200;
       var branch_base_height = 100;
 
+      function wiggle(val) {
+        return val + (Math.floor(Math.random() * 20) - 10);
+      }
+
+      var min_branch_angle = 0.02;
+      var max_branch_angle = 0.35;
+
       function draw_branches() {
 
-        for (var i = 0; i + branch_base_height < h; i += 50) {
-          var ang = .05;
+        for (var i = 0; i + branch_base_height < h; i += 30) {
+          // branch angle is function of branch position
+          var z = i / (h - branch_base_height);
+          var ang = (z * (max_branch_angle - min_branch_angle)) + min_branch_angle;
 
           // branch length is a function of branch position
           var z = 1 - (i / (h - branch_base_height));
           var l = (z * (max_branch_length - min_branch_length)) + min_branch_length;
 
           // a little branch position wiggle
-          var bh = branch_base_height + (Math.floor(Math.random() * 20) - 10);
+          var bh = wiggle(branch_base_height);
 
-          draw_branch(300, i + bh, ang * Math.PI, l);
+          draw_branch(300, i + bh, ang * Math.PI, l, -1);
 
           // a little branch position wiggle
-          var bh = branch_base_height + (Math.floor(Math.random() * 20) - 10);
+          var bh = wiggle(branch_base_height);
 
-          draw_branch(300, i + bh, (1 - ang) * Math.PI, l);
+          draw_branch(300, i + bh, (1 - ang) * Math.PI, l, 1);
         }
       }
 
