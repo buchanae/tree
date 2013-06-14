@@ -25,18 +25,38 @@
       function draw_branch(trunk_pos_x, trunk_pos_y, angle, length) {
 
         var c = length;
-        var d = 0;
 
-        c2 = (c * Math.cos(angle)) - (d * Math.sin(angle));
-        d2 = (c * Math.sin(angle)) + (d * Math.cos(angle));
+        //c2 = (c * Math.cos(angle)) - (d * Math.sin(angle));
+        //d2 = (c * Math.sin(angle)) + (d * Math.cos(angle));
 
         ctx.save();
         ctx.translate(trunk_pos_x, trunk_pos_y);
 
         ctx.beginPath();
         ctx.moveTo(0, 0);
-        ctx.lineTo(c2, d2);
+        ctx.rotate(angle);
+        ctx.lineTo(length, 0);
         ctx.stroke();
+
+        // draw leaves
+        for (var bx = 25; bx < length; bx += 25) {
+          ctx.save();
+          ctx.translate(bx, 0);
+          ctx.rotate(.15);
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(20, 0);
+          ctx.strokeStyle = 'green';
+          ctx.stroke();
+
+          ctx.rotate(-.30);
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(20, 0);
+          ctx.strokeStyle = 'green';
+          ctx.stroke();
+          ctx.restore();
+        }
 
         ctx.restore();
       }
@@ -46,15 +66,23 @@
       var branch_base_height = 100;
 
       function draw_branches() {
+
         for (var i = 0; i + branch_base_height < h; i += 50) {
           var ang = .05;
 
+          // branch length is a function of branch position
           var z = 1 - (i / (h - branch_base_height));
-          console.log(z);
           var l = (z * (max_branch_length - min_branch_length)) + min_branch_length;
 
-          draw_branch(300, i + branch_base_height, ang * Math.PI, l);
-          draw_branch(300, i + branch_base_height, (1 - ang) * Math.PI, l);
+          // a little branch position wiggle
+          var bh = branch_base_height + (Math.floor(Math.random() * 20) - 10);
+
+          draw_branch(300, i + bh, ang * Math.PI, l);
+
+          // a little branch position wiggle
+          var bh = branch_base_height + (Math.floor(Math.random() * 20) - 10);
+
+          draw_branch(300, i + bh, (1 - ang) * Math.PI, l);
         }
       }
 
