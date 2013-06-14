@@ -3,14 +3,62 @@
   <head>
   </head>
   <body>
-    <canvas id="canvas" width="600" height="400" style="border: 1px solid black"></canvas>
+    <canvas id="canvas" width="600" height="600" style="border: 1px solid black"></canvas>
 
     <script type="text/javascript">
 
       var canvas = document.getElementById('canvas');
       var ctx = canvas.getContext('2d');
+      // flip the coordinate system because it makes more sense (to me)
+      // to draw trees from the ground up.
+      ctx.scale(1, -1);
+      ctx.translate(0, -600);
 
+      // trunk
+      var h = 500;
 
+      ctx.beginPath();
+      ctx.moveTo(300, 0);
+      ctx.lineTo(300, h);
+      ctx.stroke();
+
+      function draw_branch(trunk_pos_x, trunk_pos_y, angle, length) {
+
+        var c = length;
+        var d = 0;
+
+        c2 = (c * Math.cos(angle)) - (d * Math.sin(angle));
+        d2 = (c * Math.sin(angle)) + (d * Math.cos(angle));
+
+        ctx.save();
+        ctx.translate(trunk_pos_x, trunk_pos_y);
+
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(c2, d2);
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      var min_branch_length = 25;
+      var max_branch_length = 200;
+      var branch_base_height = 100;
+
+      function draw_branches() {
+        for (var i = 0; i + branch_base_height < h; i += 50) {
+          var ang = .05;
+
+          var z = 1 - (i / (h - branch_base_height));
+          console.log(z);
+          var l = (z * (max_branch_length - min_branch_length)) + min_branch_length;
+
+          draw_branch(300, i + branch_base_height, ang * Math.PI, l);
+          draw_branch(300, i + branch_base_height, (1 - ang) * Math.PI, l);
+        }
+      }
+
+      draw_branches();
       
     </script>
   </body>
