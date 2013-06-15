@@ -1,0 +1,86 @@
+<!doctype html>
+<html
+<head>
+  <meta charset='utf-8'>
+</head>
+<body>
+
+<script src='three.js'></script>
+<script>
+
+var scene = new THREE.Scene();
+
+var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.y = 50;
+camera.position.z = 100;
+
+var renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+
+document.body.appendChild(renderer.domElement);
+
+var material = new THREE.MeshLambertMaterial({color: 0xCC0000});
+
+var tree = new THREE.Object3D();
+scene.add(tree);
+
+var trunk_height = 100;
+
+var trunk = new THREE.Mesh(new THREE.CubeGeometry(5, trunk_height, 5), material);
+trunk.position.y = trunk_height / 2;
+tree.add(trunk);
+
+var min_branch_length = 25;
+var max_branch_length = 75;
+var branch_base_height = 25;
+var branch_spacing = 10;
+
+for (var h = branch_base_height; h < trunk_height; h += branch_spacing) {
+
+  // branch length is a function of branch position
+  var z = 1 - (h / (trunk_height - branch_base_height));
+  var l = (z * (max_branch_length - min_branch_length)) + min_branch_length;
+
+  var b = new THREE.Mesh(new THREE.CubeGeometry(2, 2, l), material);
+  b.position.y = h;
+  b.position.z = l / 2;
+  tree.add(b);
+
+  var b2 = new THREE.Mesh(new THREE.CubeGeometry(l, 2, 2), material);
+  b2.position.y = h;
+  b2.position.x = l / 2;
+  tree.add(b2);
+
+  var b3 = new THREE.Mesh(new THREE.CubeGeometry(2, 2, l), material);
+  b3.position.y = h;
+  b3.position.z = -1 * (l / 2);
+  tree.add(b3);
+
+  var b4 = new THREE.Mesh(new THREE.CubeGeometry(l, 2, 2), material);
+  b4.position.y = h;
+  b4.position.x = -1 * (l / 2);
+  tree.add(b4);
+}
+
+
+
+
+
+var cube_l = new THREE.Mesh(new THREE.CubeGeometry(1, 1, 1), material);
+var l = new THREE.PointLight(0xFF0000);
+l.position.set(0, 0, 100);
+cube_l.position = l.position;
+scene.add(l);
+scene.add(cube_l);
+
+
+
+function render() {
+  requestAnimationFrame(render);
+  tree.rotation.y += 0.02;
+  renderer.render(scene, camera);
+}
+render();
+</script>
+</body>
+</html>
