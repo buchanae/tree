@@ -19,74 +19,88 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 
 document.body.appendChild(renderer.domElement);
 
-var material = new THREE.MeshLambertMaterial({color: 'green'});
+var leaf_material = new THREE.MeshLambertMaterial({color: 'green'});
 var wood_material = new THREE.MeshLambertMaterial({color: 'gray'})
 
 var tree = new THREE.Object3D();
 scene.add(tree);
 
+// Create the trunk
+
 var trunk_height = 200;
 
-var trunk = new THREE.Mesh(new THREE.CubeGeometry(5, trunk_height, 5), wood_material);
+var trunk = new THREE.Mesh(new THREE.CylinderGeometry(1, 5, trunk_height, 5, 20, true), wood_material);
 trunk.position.y = trunk_height / 2;
 tree.add(trunk);
+
+// Add branches
 
 var min_branch_length = 25;
 var max_branch_length = 75;
 var branch_base_height = 25;
 var branch_spacing = 10;
-
 var branch_rotation_offset = Math.PI * .25;
+var min_branch_angle = 0.1;
+var max_branch_angle = 0.35;
 
-
-for (var h = branch_base_height, offset = false; h < trunk_height; h += branch_spacing, offset = !offset) {
+for (var branch_height = branch_base_height, offset = false; branch_height < trunk_height; branch_height += branch_spacing, offset = !offset) {
 
   // branch length is a function of branch position
-  var z = 1 - (h / (trunk_height - branch_base_height));
-  var l = (z * (max_branch_length - min_branch_length)) + min_branch_length;
+  var z = branch_height / (trunk_height - branch_base_height);
+  var branch_length = ((1 - z) * (max_branch_length - min_branch_length)) + min_branch_length;
+  var branch_angle = (z * (max_branch_angle - min_branch_angle)) + min_branch_angle;
 
   for (var i = 0; i < 4; i++) {
 
     var branch = new THREE.Object3D();
 
-    var b_geo = new THREE.CubeGeometry(l, 2, 2);
-    b_geo.applyMatrix(new THREE.Matrix4().makeTranslation(l / 2, 0, 0));
+    var b_geo = new THREE.CubeGeometry(branch_length, 1, 1);
+    b_geo.applyMatrix(new THREE.Matrix4().makeTranslation(branch_length / 2, 0, 0));
 
     var b = new THREE.Mesh(b_geo, wood_material);
 
     branch.add(b);
 
-    var leaf_start = 10;
-    var leaf_spacing = 5;
-    var leaf_length = 10;
-
-    for (var j = leaf_start; j < l; j += leaf_spacing) {
-
-      var leaf_geo = new THREE.CubeGeometry(leaf_length, 1, 1);
-      leaf_geo.applyMatrix(new THREE.Matrix4().makeTranslation(leaf_length / 2, 0, 0));
-
-      var c = new THREE.Mesh(leaf_geo, material);
-      c.rotation.y = .5;
-      c.position.x = j;
-      c.rotation.x = Math.PI * ((Math.random() * 0.3) - 0.15);
-
-      branch.add(c);
-
-      var d = new THREE.Mesh(leaf_geo, material);
-      d.rotation.y = -.5;
-      d.position.x = j;
-
-      branch.add(d);
-    }
-
-    branch.position.y = h;
+    branch.position.y = branch_height;
     branch.rotation.y = Math.PI * 0.5 * i;
     if (offset) {
       branch.rotation.y += branch_rotation_offset;
     }
-    branch.rotation.z = Math.PI * 0.2;
+
+    branch.rotation.z = Math.PI * branch_angle;
 
     tree.add(branch);
+
+    // Add leaves
+
+    var leaf_start = 10;
+    var leaf_spacing = 2;
+    var max_leaf_length = 10;
+    var min_leaf_length = 3;
+    var leaf_rotation = 0.4;
+
+    for (var leaf_position = leaf_start; leaf_position < branch_length; leaf_position += leaf_spacing) {
+
+      var p = 1 - ((leaf_position - leaf_start) / (branch_length - leaf_start));
+      var leaf_length = ((max_leaf_length - min_leaf_length) * p) + min_leaf_length;
+
+      var leaf_geo = new THREE.CubeGeometry(leaf_length, 0.5, 0.5);
+      leaf_geo.applyMatrix(new THREE.Matrix4().makeTranslation(leaf_length / 2, 0, 0));
+
+      var c = new THREE.Mesh(leaf_geo, leaf_material);
+      c.rotation.y = .5;
+      c.position.x = leaf_position;
+      c.rotation.x = Math.PI * ((Math.random() * 0.3) - 0.15);
+
+      branch.add(c);
+
+      var d = new THREE.Mesh(leaf_geo, leaf_material);
+      d.rotation.y = -.5;
+      d.position.x = leaf_position;
+      d.rotation.x = Math.PI * ((Math.random() * leaf_rotation) - (leaf_rotation / 2));
+
+      branch.add(d);
+    }
   }
 }
 
@@ -105,15 +119,17 @@ scene.add(l);
 //scene.add(ambientLight);
 
 
-//tree.rotation.y = Math.PI * 0.4;
 
 function render() {
   requestAnimationFrame(render);
-  //tree.rotation.y += 0.02;
+  tree.rotation.y += 0.02;
   renderer.render(scene, camera);
 
 }
-render();
+//render();
+
+tree.rotation.y = Math.PI * 0.4;
+renderer.render(scene, camera);
 </script>
 </body>
 </html>
