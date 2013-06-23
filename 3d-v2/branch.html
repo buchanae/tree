@@ -7,6 +7,7 @@
 
 <script src='threejs/build/three.js'></script>
 
+
 <script src="threejs/examples/js/shaders/ConvolutionShader.js"></script>
 <script src="threejs/examples/js/shaders/CopyShader.js"></script>
 <script src="threejs/examples/js/shaders/FXAAShader.js"></script>
@@ -54,20 +55,22 @@ composer.addPass( effectCopy );
 
 
 
-var leaf_material = new THREE.MeshLambertMaterial({color: 'green'});
-var wood_material = new THREE.MeshLambertMaterial({color: 'brown'})
+var leaf_material = new THREE.MeshLambertMaterial({color: '#0C9949'});
+var wood_material = new THREE.MeshLambertMaterial({color: '#C4AB74'})
 
 
 var tree = new THREE.Object3D();
+tree.rotation.x += 0.2;
+tree.rotation.z -= 0.1;
 
 scene.add(tree);
 
 
 // Create the trunk
 
-var trunk_height = 100;
+var trunk_height = 80;
 
-var trunk = new THREE.Mesh(new THREE.CylinderGeometry(1, 2, trunk_height, 5, 20, true), wood_material);
+var trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 2, trunk_height, 5, 20, true), wood_material);
 trunk.position.y = trunk_height / 2;
 tree.add(trunk);
 
@@ -83,20 +86,32 @@ var branch_angle = 0.2;
 var leaf_length = 10;
 var leaf_spacing = 3;
 
-var leaf_geo = new THREE.CubeGeometry(leaf_length, 0.5, 0.5);
+var leaf_geo = new THREE.CubeGeometry(leaf_length, 0.3, 1);
 leaf_geo.applyMatrix(new THREE.Matrix4().makeTranslation(leaf_length / 2, 0, 0));
 
-for (var leaf_position = 0; leaf_position < trunk_height; leaf_position += leaf_spacing) {
+
+for (var leaf_position = 0; leaf_position <= trunk_height; leaf_position += leaf_spacing) {
 
   for (var a = 0; a <= 2; a += 0.25) {
     var c = new THREE.Mesh(leaf_geo, leaf_material);
     //c.rotation.y = Math.PI * 0.45;
-    c.position.y = leaf_position;
-    c.rotation.y = Math.PI * a;
+    c.position.y = leaf_position + ((Math.random() * 2) - 1);
+    c.rotation.y = Math.PI * a + (Math.random() * 0.2);
+    c.rotation.z += 0.25 + (Math.random() * 0.2 - 0.1);
 
     tree.add(c);
   }
 }
+
+  for (var a = 0; a <= 2; a += 0.4) {
+    var c = new THREE.Mesh(leaf_geo, leaf_material);
+    c.position.y = trunk_height - Math.random();
+    c.rotation.y = Math.PI * a + (Math.random() * 0.2);
+    c.rotation.z += 0.7 + (Math.random() * 0.2 - 0.1);
+
+    tree.add(c);
+  }
+
 
 
 var axes = new THREE.AxisHelper(50);
@@ -106,20 +121,22 @@ scene.add(axes);
 
 
 var l = new THREE.PointLight(0xFFFFFF);
-l.position.set(0, 0, 150);
+l.position.set(50, 100, 150);
 scene.add(l);
 
 
 function animate() {
   requestAnimationFrame(animate);
+  tree.rotation.y += 0.01;
   render();
 }
+animate();
 
 function render() {
   renderer.clear();
   composer.render();
 }
-render();
+//render();
 </script>
 </body>
 </html>
