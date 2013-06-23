@@ -56,27 +56,42 @@ composer.addPass( effectCopy );
 
 var leaf_material = new THREE.MeshLambertMaterial({color: '#0C9949'});
 
+var leaf_length = 50;
 
-var rectLength = 10, rectWidth = 2;
+var rectLength = 10, rectWidth = 50;
 var rectShape = new THREE.Shape();
 
-rectShape.moveTo( -rectLength/2, -rectWidth/2 );
-rectShape.lineTo( -rectLength/2, rectWidth/2 );
-rectShape.lineTo( rectLength/2, rectWidth/2 );
-rectShape.lineTo( rectLength/2, -rectLength/2 );
-rectShape.lineTo( -rectLength/2, -rectLength/2 );
+rectShape.moveTo( 0, 0);
+rectShape.lineTo( rectLength, 0);
+rectShape.lineTo(rectLength, rectWidth);
+rectShape.lineTo(0, rectWidth);
+rectShape.lineTo(0, 0);
 
+var extrudeSettings = { amount: 1, steps: 100, bevelEnabled: false };
+
+/*
 var points = [];
 points.push(new THREE.Vector3(0, 0, 0));
 points.push(new THREE.Vector3(30, 3, 0));
 points.push(new THREE.Vector3(50, 10, 0));
+var splinePath = new THREE.SplineCurve3( points );
 
-var extrudeSettings = { amount: 200,  bevelEnabled: true, bevelSegments: 2, steps: 100 }; // bevelSegments: 2, steps: 2 , bevelSegments: 5, bevelSize: 8, bevelThickness:5,
-extrudeSettings.extrudePath = new THREE.SplineCurve3( points );
-extrudeSettings.bevelEnabled = false;
+var curve = new THREE.CurvePath();
+var b = new THREE.QuadraticBezierCurve3(
+  new THREE.Vector3(0, 0, 0),
+  new THREE.Vector3(25, -15, 0),
+  new THREE.Vector3(leaf_length, 0, 0)
+);
+
+curve.add(b);
+//extrudeSettings.extrudePath = curve;
+*/
+
+
+
+//var y = new THREE.Mesh(rectShape.makeGeometry(), leaf_material);
 
 var x = rectShape.extrude(extrudeSettings);
-
 var y = new THREE.Mesh(x, leaf_material);
 scene.add(y);
 
@@ -102,6 +117,7 @@ function render() {
   renderer.clear();
   composer.render();
 }
+//render();
 //render();
 
 </script>
