@@ -10,6 +10,11 @@ document.body.appendChild( renderer.domElement );
 
 var Vec = THREE.Vector3;
 var UP = new Vec(0, 1, 0);
+var RIGHT = new Vec(1, 0, 0);
+var FORWARD = new Vec(0, 0, 1);
+var X_AXIS = RIGHT;
+var Y_AXIS = UP;
+var Z_AXIS = FORWARD;
 var geometry = new THREE.Geometry();
 
 
@@ -88,7 +93,7 @@ function addSlices(geometry, slices) {
 function makeSlice(position, normal, shape) {
   var vertices = [];
   var q = new THREE.Quaternion();
-  q.setFromUnitVectors(UP, normal);
+  q.setFromUnitVectors(Y_AXIS, normal);
 
   for (var i = 0; i < shape.length; i++) {
     var point = shape[i];
@@ -104,32 +109,21 @@ function makeSlice(position, normal, shape) {
 function makeShape(radius) {
   var shape = new THREE.Shape();
   shape.absarc( 0, 0, radius, 0, Math.PI * 2, false );
-  var divisions = 10;
+  var divisions = 5;
   return shape.extractPoints(divisions).shape;
 }
 
 
-function makeBranch(geometry) {
-  var spline = new THREE.SplineCurve3([
-    new Vec(0, 0, 0),
-    new Vec(0, 1, 0),
-    new Vec(1, 1, 0),
-    new Vec(1, 4, 0),
-    new Vec(3, 4, 0),
-    new Vec(3, 4, 1),
-    new Vec(3, 4, 4),
-    new Vec(3, 5, 4),
-  ]);
+function makeBranch(geometry, startRadius, curve) {
 
   var iterations = 50;
-  var start_radius = 1;
   var slices = [];
 
   for (var i = 0; i < iterations; i++) {
     var t = i / iterations;
-    var normal = spline.getTangent(t);
-    var position = spline.getPoint(t);
-    var radius = (1 - t) * start_radius;
+    var normal = curve.getTangent(t);
+    var position = curve.getPoint(t);
+    var radius = (1 - t) * startRadius;
     var shape = makeShape(radius);
     var slice = makeSlice(position, normal, shape);
     slices.push(slice);
@@ -138,17 +132,82 @@ function makeBranch(geometry) {
   addSlices(geometry, slices);
 }
 
-makeBranch(geometry);
+function generateTrunkCurve() {
+  var points = [new Vec(0, 0, 0), new Vec(0, 1, 0)];
 
-// TrunkData.branches.push(generatePath({
-//   position: new Vec(0, 3, 0),
-//   normal: new Vec(1, 1, 0),
-//   radius: 0.5
-// }));
-// makeBranch(geometry, TrunkData.branches[0]);
+  for (var i = 2; i < 10; i++) {
+    points.push(new Vec(
+      Math.random(),
+      i,
+      Math.random()
+    ));
+  }
+
+  return new THREE.CatmullRomCurve3(points);
+}
 
 
 
+function randomRotation() {
+  return 2 * Math.PI * Math.random();
+}
+
+function randomSmallRotation() {
+  return ((Math.PI / 8) * Math.random()) - (Math.PI / 16);
+}
+
+
+function generateBranchCurve(start, length) {
+  var numberOfSlices = 5;
+  var sliceLength = length / numberOfSlices;
+  var points = [start.clone()];
+
+  var overallDirection = X_AXIS.clone();
+  // Tilt the branch slightly upward
+  overallDirection.applyAxisAngle(Z_AXIS, Math.abs(randomSmallRotation()));
+  // Point the branch in a random direction about the Y axis
+  overallDirection.applyAxisAngle(Y_AXIS, randomRotation());
+
+  var last = start.clone();
+
+  for (var i = 0; i < numberOfSlices; i++) {
+    var pointDirection = overallDirection.clone();
+
+    pointDirection.applyAxisAngle(X_AXIS, randomSmallRotation());
+    pointDirection.applyAxisAngle(Y_AXIS, randomSmallRotation());
+    pointDirection.applyAxisAngle(Z_AXIS, randomSmallRotation());
+
+    var point = pointDirection.clone().setLength(sliceLength).add(last);
+    points.push(point);
+    last = point;
+  }
+
+  return new THREE.CatmullRomCurve3(points);
+}
+
+
+
+var trunkCurve = generateTrunkCurve();
+makeBranch(geometry, 1, trunkCurve);
+
+var branchMaxLength = 5;
+var branchMaxRadius = 0.5;
+
+for (var i = 0; i < 10; i++) {
+  var ageFactor = (1 - (i / 10))
+  var branchStart = trunkCurve.getPoint(i / 10);
+  var branchLength = ageFactor * branchMaxLength;
+  var branchCurve = generateBranchCurve(branchStart, branchLength);
+  var branchStartRadius = ageFactor * branchMaxRadius;
+  makeBranch(geometry, branchStartRadius, branchCurve);
+}
+
+
+
+
+
+
+console.log("Vertex count", geometry.vertices.length);
 geometry.computeBoundingSphere();
 
 
@@ -168,8 +227,15 @@ directionalLight.position.z = 25;
 // directionalLight.position.normalize();
 scene.add( directionalLight );
 
-camera.position.y = 2;
+camera.position.x = 0;
+camera.position.y = 5;
 camera.position.z = 10;
+// camera.lookAt(new Vec(0, 0, 0));
+
+// Top down
+// camera.position.x = 0;
+// camera.position.y = 20;
+// camera.position.z = 0;
 // camera.lookAt(new Vec(0, 0, 0));
 
 // tree.rotation.y += Math.PI / 2;
