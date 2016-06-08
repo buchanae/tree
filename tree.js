@@ -6,7 +6,7 @@ renderer.setSize( window.innerWidth, window.innerHeight );
 document.body.appendChild( renderer.domElement );
 
 
-var tree = Version4();
+var tree = Version5();
 scene.add(tree);
 
 scene.add( new THREE.AmbientLight( 0x111111 ) );
@@ -29,10 +29,8 @@ camera.position.z = 10;
 // camera.position.z = 0;
 // camera.lookAt(new Vec(0, 0, 0));
 
-// tree.rotation.y += Math.PI / 2;
 setInterval(function() {
-  // tree.rotation.y += 0.05;
-  tree.rotateOnAxis(Y_AXIS, 0.05);
+  tree.rotation.y += 0.05;
 }, 50);
 
 

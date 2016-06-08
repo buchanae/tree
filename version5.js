@@ -1,5 +1,5 @@
 
-function Version4() {
+function Version5() {
 
 
   // Builds faces between two slices.
@@ -177,7 +177,7 @@ function Version4() {
     var midPoint = path.getPoint(0.5);
     midPoint.add(new Vec(0, 0.5, 0));
     path.points.splice(1, 0, midPoint);
-    
+
     var radiusCurve = new THREE.LineCurve(new Vec2(0, startRadius), new Vec2(1, 0));
 
     var geometry = extrude(5, path, function(offset) {
