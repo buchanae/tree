@@ -1,5 +1,5 @@
 
-function Version3() {
+function Version4() {
 
 
   // Builds faces between two slices.

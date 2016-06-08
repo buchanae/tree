@@ -1,4 +1,5 @@
 var Vec = THREE.Vector3;
+var Vec2 = THREE.Vector2;
 var UP = new Vec(0, 1, 0);
 var RIGHT = new Vec(1, 0, 0);
 var FORWARD = new Vec(0, 0, 1);
