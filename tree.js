@@ -6,7 +6,7 @@ renderer.setSize( window.innerWidth, window.innerHeight );
 document.body.appendChild( renderer.domElement );
 
 
-var tree = Version1();
+var tree = Version3();
 scene.add(tree);
 
 scene.add( new THREE.AmbientLight( 0x111111 ) );
