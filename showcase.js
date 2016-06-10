@@ -1,12 +1,12 @@
 
-function Showcase(tree) {
+function Showcase(tree, container) {
   var scene = new THREE.Scene();
   var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
 
   var renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize( window.innerWidth, window.innerHeight );
   renderer.setClearColor(0xffffff);
-  document.body.appendChild( renderer.domElement );
+  container.appendChild( renderer.domElement );
 
   scene.add(tree);
 
@@ -17,9 +17,9 @@ function Showcase(tree) {
   scene.add( directionalLight );
 
   camera.position.x = 0;
-  camera.position.y = 20;
+  camera.position.y = 5;
   camera.position.z = 17;
-  camera.lookAt(new Vec(0, 13, 0));
+  camera.lookAt(new Vec(0, 12, 0));
 
   // Top down
   // camera.position.x = 0;
