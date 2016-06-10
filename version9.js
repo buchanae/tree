@@ -3,101 +3,71 @@ function Version9() {
   console.log("Tree version 9");
 
 
-  // Builds faces between two slices.
-  // A and B are arrays of numbers pointing to entries in an array of vertices,
-  // because THREE.Face3 expect indexes of vertices.
-  //
-  // Currently, A and B are expected to be the same length.
-  function connectSlices(geometry, A, B) {
-    var Face3 = THREE.Face3;
+// Builds faces between two slices.
+// A and B are arrays of numbers pointing to entries in an array of vertices,
+// because THREE.Face3 expect indexes of vertices.
+//
+// Currently, A and B are expected to be the same length.
+function connectSlices(geometry, A, B) {
+  var Face3 = THREE.Face3;
 
-    for (var i = 0; i < A.length; i++) {
-      var A_index = A[i];
-      var B_index = B[i];
+  for (var i = 0; i < A.length; i++) {
+    var A_index = A[i];
+    var B_index = B[i];
 
-      // Connect layers into faces
-      // The last vertex is a special case because it must connect back to the first vertex.
-      if (i == A.length - 1) {
-        var A_first_index = A[0];
-        var B_first_index = B[0];
-        geometry.faces.push(new Face3(B_index, A_index, A_first_index));
-        geometry.faces.push(new Face3(B_index, A_first_index, B_first_index));
-      } else {
-        var A_next_index = A[i + 1];
-        var B_next_index = B[i + 1];
-        geometry.faces.push(new Face3(B_index, A_index, A_next_index));
-        geometry.faces.push(new Face3(B_index, A_next_index, B_next_index));
-      }
+    // Connect layers into faces
+    // The last vertex is a special case because it must connect back to the first vertex.
+    if (i == A.length - 1) {
+      var A_first_index = A[0];
+      var B_first_index = B[0];
+      geometry.faces.push(new Face3(B_index, A_index, A_first_index));
+      geometry.faces.push(new Face3(B_index, A_first_index, B_first_index));
+    } else {
+      var A_next_index = A[i + 1];
+      var B_next_index = B[i + 1];
+      geometry.faces.push(new Face3(B_index, A_index, A_next_index));
+      geometry.faces.push(new Face3(B_index, A_next_index, B_next_index));
     }
   }
+}
 
-  // Helps build up vertices in a geometry adding and connecting faces for a given array of "slices"
-  // which are essentially arrays of vertices (probably from extrusion of 2D shapes).
-  //
-  // Currently this expects each slice to have the same number of vertices.
-  function addSlices(geometry, slices) {
 
-    // Helper pushes a slice onto geometry.vertices and returns an array of vertex indexes.
-    function pushSlice(slice) {
-      var indexes = [];
-      for (var i = 0; i < slice.length; i++) {
-        var next_index = geometry.vertices.length;
-        geometry.vertices.push(slice[i]);
-        indexes.push(next_index);
-      }
-      return indexes;
+
+function extrude(divisions, paths) {
+  var geometry = new THREE.Geometry();
+  var previousIndexes;
+
+  for (var i = 0; i < divisions; i++) {
+    // Offset along the extrude paths
+    var offset = i / (divisions - 1);
+    // Will hold the indexes of the new vertices (because three.js tracks faces by vertex indexes)
+    var indexes = [];
+
+    // Get a point at the current offset for each extrude path
+    for (var j = 0; j < paths.length; j++) {
+      // Get the point
+      var point = paths[j].getPoint(offset);
+      // Store it in the geometry. Make note of its index.
+      var index = geometry.vertices.length;
+      geometry.vertices.push(point);
+      // Store the index so faces can be built later
+      indexes.push(index);
     }
 
-    var previousIndexes;
-
-    for (var i = 0; i < slices.length; i++) {
-      var slice = slices[i];
-      var indexes = pushSlice(slice);
-
-      if (previousIndexes) {
-        connectSlices(geometry, previousIndexes, indexes);
-      }
-      previousIndexes = indexes;
+    // Connect the new vertices to the last slice
+    if (previousIndexes) {
+      connectSlices(geometry, previousIndexes, indexes);
     }
+    previousIndexes = indexes;
   }
 
-
-  // Modifies a shape's vertices to be positions and oriented at the given position and direction.
-  function makeSlice(position, direction, shape) {
-    var vertices = [];
-    var q = new THREE.Quaternion();
-    q.setFromUnitVectors(Y_AXIS, direction);
-
-    for (var i = 0; i < shape.length; i++) {
-      var point = shape[i];
-      var vec = new Vec(point.x, 0, point.y);
-
-      vec.applyQuaternion(q);
-      vec.add(position);
-      vertices.push(vec);
-    }
-    return vertices;
-  }
-
-  function extrude(divisions, func) {
-    var geometry = new THREE.Geometry();
-    var slices = [];
-
-    for (var i = 0; i < divisions; i++) {
-      var offset = i / (divisions - 1);
-      var info = func(offset);
-      var slice = makeSlice(info.position, info.direction, info.shape);
-      slices.push(slice);
-    }
-
-    addSlices(geometry, slices);
-    return geometry;
-  }
+  return geometry;
+}
 
 function circle(radius) {
   var shape = new THREE.Shape();
   shape.absarc(0, 0, radius, 0, Math.PI * 2, false);
-  return shape;
+  return shape.getPoints(5);
 }
 
 
@@ -122,136 +92,107 @@ function iterateBranch(start, cb) {
   }
 }
 
-function iterateNode(node) {
-    node.age += 1;
-    extendTip(node);
-    incrementRadius(node);
-    incrementLength(node);
-    attemptBranch(node);
-
-    // Iterate node's branches
-    for (var j = 0; j < node.branches.length; j++) {
-      iterateBranch(node.branches[j], iterateNode);
-    }
-}
-
-
 
 /****************************************************************************/
 
+// TODO I have mixed feelings about this style. Writing it all out makes the flow clearer
+//      and reduces the overhead of all the little functions existing, but it's not composable.
+//      I guess I'm shooting for something in between: composable yet concise and clear.
+//      In the meantime, having one big function is easier to comprehend and organize.
+function iterateNode(n) {
+    n.age += 1;
 
-function trendUpwards(node) {
-  if (node.depth < 2) {
-    node.direction.add(new Vec(0, 0.025, 0));
-  } else {
-    node.direction.add(new Vec(0, 0.05, 0));
-  }
-}
+    // Extend tip
+    if (n.isTip) {
+      n.isTip = false;
 
+      var newNode = Node({
+        index: n.index + 1,
+        depth: n.depth,
+        direction: n.direction.clone(),
+      });
 
-function jitterDirection(node) {
-  // Don't jitter nodes that are at the base of a trunk/branch because it renders weird
-  // TODO put this in more natural language, such as "tropism more likely as farther away
-  //      from base because less stability"
-  //      OR, maybe just make jitter at base very minimal
-  if (node.index > 2) {
-    node.direction.applyAxisAngle(X_AXIS, randomSmallRotation());
-    node.direction.applyAxisAngle(Y_AXIS, randomSmallRotation() * 0.25);
-    node.direction.applyAxisAngle(Z_AXIS, randomSmallRotation() * 0.5);
-  }
-}
+      // Trend upwards
+      if (newNode.depth < 2) {
+        newNode.direction.y += 0.025;
+      } else {
+        newNode.direction.y += 0.05;
+      }
 
-function initialTiltUpwards(node) {
-  node.direction.add(new Vec(0, 0.5, 0));
-}
+      // Jitter direction
+      if (newNode.index > 2) {
+        jitterDirection(newNode.direction, 0.05, 0, 0.05);
+      }
 
-function diminishGrowthRate(node) {
-  node.growthRate *= 0.2;
-}
+      // Jitter shape
+      jitterShape(newNode.shape);
 
-// TODO relate branch point to age and distance to tip to simulate auxin and keep branches
-//      for forming at the base of the trunk.
-function attemptBranch(node) {
-  if (shouldBranch(node)) {
+      // Link new node
+      n.next = newNode;
+      newNode.previous = n;
+    }
 
-      var direction = node.direction.clone();
-      var rotation = Math.random() * (Math.PI * 2 );
+    // Scale shape
+    if (n.depth < 3) {
+      n.scale += 0.1;
+    } else {
+      n.scale += 0.2;
+    }
 
-      var maxAngle = Math.PI / 3;
-      direction.applyAxisAngle(X_AXIS, Math.random() * maxAngle);
-      direction.applyAxisAngle(Y_AXIS, Math.random() * maxAngle);
-      direction.applyAxisAngle(Z_AXIS, Math.random() * maxAngle);
+    // Increment length
+    if (n.depth == 0) {
+      n.length += 0.01;
+    } else {
+      n.length += 0.001;
+    }
+
+    // Attempt to create a branch
+    if (n.branches.length == 0
+      && n.depth < 5
+      && n.index > 2
+      && n.age > 1
+      && n.age < 10
+      && Math.random() < 0.05
+    ) {
+      var direction = n.direction.clone();
+
+      // Jitter direction
+      var maxAngle = 1 / 6;
+      jitterDirection(direction, maxAngle, maxAngle, maxAngle);
 
       // Rotate around the trunk
-      direction.applyAxisAngle(node.direction, rotation);
+      // direction.applyAxisAngle(n.direction, randomAngle());
 
       var newNode = Node({
         direction: direction,
-        depth: node.depth + 1,
+        depth: n.depth + 1,
       });
 
-      node.branches.push(newNode);
+      n.branches.push(newNode);
+    }
+
+    // Iterate the node's branches
+    for (var j = 0; j < n.branches.length; j++) {
+      iterateBranch(n.branches[j], iterateNode);
     }
 }
 
-function extendTip(node) {
-  if (node.isTip) {
-    node.isTip = false;
-
-    // if (node.depth > 1 && node.index > 5) return;
-
-    var newNode = Node({
-      index: i + 1,
-      depth: node.depth,
-      direction: node.direction.clone(),
-      growthRate: node.growthRate,
-    });
-
-    trendUpwards(newNode);
-    jitterDirection(newNode);
-    jitterShape(newNode);
-    node.next = newNode;
-    newNode.previous = node;
-  }
+function randomAngle() {
+  return Math.random() * Math.PI * 2;
 }
 
-function jitterShape(node) {
-  for (var i = 0; i < node.shape.length; i++) {
-    node.shape[i].multiplyScalar(Math.random() + 0.8);
-  }
+function jitterDirection(direction, x, y, z) {
+    var xRange = Math.PI * 2 * x;
+    var yRange = Math.PI * 2 * y;
+    var zRange = Math.PI * 2 * z;
+    direction.applyAxisAngle(X_AXIS, Math.random() * xRange - xRange / 2);
+    direction.applyAxisAngle(Y_AXIS, Math.random() * yRange - yRange / 2);
+    direction.applyAxisAngle(Z_AXIS, Math.random() * zRange - zRange / 2);
 }
 
-function shouldBranch(node) {
-  return node.branches.length == 0
-  && node.depth < 5
-  && node.index > 2
-  && node.age > 1
-  && node.age < 10
-  && Math.random() < 0.05;
-}
-
-function incrementRadius(node) {
-  if (node.depth < 3) {
-    var amount = 1.15;
-  } else {
-    var amount = 1.2;
-  }
-
-  // TODO it would be better to store the amount of scaling needed and apply it at the end
-  //      but this might affect any intermediate processes that need the updated data, such as
-  //      jitter. Although there's a clever way to store jitter values as well. But, if both
-  //      systems move into shaders, then it's all efficient.
-  //      In the meantime, it's efficient enough to do it the simple way
-  for (var i = 0; i < node.shape.length; i++) {
-    node.shape[i].multiplyScalar(amount);
-  }
-}
-
-function incrementLength(node) {
-  if (node.depth == 0) {
-    node.length += 0.01;
-  } else {
-    node.length += 0.001;
+function jitterShape(shape) {
+  for (var i = 0; i < shape.length; i++) {
+    shape[i].multiplyScalar(Math.random() + 0.8);
   }
 }
 
@@ -263,79 +204,95 @@ function Node(initial) {
     isTip: true,
     age: 1,
     length: 0.5,
+    scale: 1,
     direction: UP.clone(),
-    minBranchAge: 1,
     branches: [],
-    branchChance: 0.5,
     branchRotation: 0,
-    growthRate: 0.01,
-    shape: circle(0.01).extractPoints(10).shape,
+    shape: circle(0.1),
     next: null,
     previous: null
   }, initial);
 }
 
 
+// Modifies a shape's vertices to be positions and oriented to the node's position and direction.
+function getShape(node) {
+  var vertices = [];
+  var q = new THREE.Quaternion();
+  q.setFromUnitVectors(Y_AXIS, node.direction);
+
+  for (var i = 0; i < node.shape.length; i++) {
+    var point = node.shape[i];
+    var vec = new Vec(point.x, 0, point.y);
+    vec.multiplyScalar(node.scale);
+    vec.applyQuaternion(q);
+    vertices.push(vec);
+  }
+  return new THREE.CatmullRomCurve3(vertices);
+}
+
+function getLeaves(node) {
+  var leaves = [];
+  // TODO move leaves out of this function?
+  // TODO leaves is an interesting case because it wants to know the final state of the tree
+  //      in order to tell if a node is near the end of a branch. There could be a couple ways
+  //      to implement this:
+  //      1. have a leaf likelihood that gets decremented on each iteration
+  //      2. Use node.age as a likelihood measure
+  //      3. Organize things so that it's easy and acceptable to query for nodes after the system
+  //         has iterated.
+  if (node.next === null) {
+    leaves.push(new Vec(0, 0, 0));
+  }
+  return leaves;
+}
+
+
+
 function systemToGeometry(startNode, startPosition) {
 
+  var shapeDivisions = 5;
   var branches = new THREE.Geometry();
   var leaves = new THREE.Geometry();
-  var nodePoints = new THREE.Geometry();
-  var path = new THREE.CatmullRomCurve3([startPosition]);
-  var shapes = [];
+  var nextPosition = startPosition.clone();
+  // Keep a path for every point on a node's shape.
+  // Each shape has "shapeDivisions" points.
+  var paths = [];
+
+  for (var i = 0; i < shapeDivisions + 1; i++) {
+    paths.push(new THREE.CatmullRomCurve3());
+  }
 
   iterateBranch(startNode, function(node) {;
+    var shape = getShape(node).getPoints(shapeDivisions);
 
-    // var shape = getShape(node).extractPoints(3).shape;
-    // TODO this is making an assumption about the shape curve. How to move this out?
-    var shape = new THREE.SplineCurve(node.shape);
-    shapes.push(shape.getPoints(10));
-
-    var lastPoint = path.points[path.points.length - 1];
-    var nextPoint = node.direction
-      .clone()
-      .setLength(node.length)
-      .add(lastPoint);
-    path.points.push(nextPoint);
-
-    // TODO move leaves out of this function?
-    // TODO leaves is an interesting case because it wants to know the final state of the tree
-    //      in order to tell if a node is near the end of a branch. There could be a couple ways
-    //      to implement this:
-    //      1. have a leaf likelihood that gets decremented on each iteration
-    //      2. Use node.age as a likelihood measure
-    //      3. Organize things so that it's easy and acceptable to query for nodes after the system
-    //         has iterated.
-    if (node.next === null) {
-      leaves.vertices.push(nextPoint);
+    for (var i = 0; i < shape.length; i++) {
+      var vertex = shape[i].clone().add(nextPosition);
+      paths[i].points.push(vertex);
     }
 
+    nextPosition.add(node.direction.clone().setLength(node.length));
+
+    // TODO this makes a big assumption that leaves are a point cloud, which they won't always be.
+    var leafVertices = getLeaves(node);
+    for (var i = 0; i < leafVertices.length; i++) {
+      var vertex = leafVertices[i].clone().add(nextPosition);
+      leaves.vertices.push(vertex);
+    }
+
+    // Build node's branches geometries
     for (var j = 0; j < node.branches.length; j++) {
-      var branchGeometries = systemToGeometry(node.branches[j], nextPoint);
+      var branchGeometries = systemToGeometry(node.branches[j], nextPosition);
       branches.merge(branchGeometries.branches);
       leaves.merge(branchGeometries.leaves);
-      nodePoints.merge(branchGeometries.nodePoints);
     }
   });
 
-  var trunkGeometry = extrude(20, function(offset) {
-    // TODO this seems to be OK for now, but in the future I'd like to be able to interpolate
-    //      between two shapes
-    var index = Math.floor(offset * (shapes.length - 1));
-    var shape = shapes[index];
+  var trunkGeometry = extrude(10, paths);
 
-    return {
-      direction: path.getTangent(offset),
-      position: path.getPoint(offset),
-      shape: shape,
-    };
-  });
-
-  Array.prototype.push.apply(nodePoints.vertices, path.getPoints(10));
   branches.merge(trunkGeometry);
 
   return {
-    nodePoints: nodePoints,
     branches: branches,
     leaves: leaves,
   };
@@ -384,12 +341,6 @@ geometries.leaves.colors = colors;
 var leaves = new THREE.Points(geometries.leaves, leavesMaterial);
 
 
-var nodePointsMaterial = new THREE.PointsMaterial({
-  color : 0xFFC60A,
-  size: 0.25
-});
-var nodePoints = new THREE.Points(geometries.nodePoints, nodePointsMaterial);
-
 var wireframeMaterial = new THREE.MeshBasicMaterial({
   color: 0x00ff00
 });
@@ -397,9 +348,8 @@ wireframeMaterial.wireframe = true;
 var wireframe = new THREE.Mesh(geometries.branches, wireframeMaterial);
 
 var group = new THREE.Group();
-group.add(nodePoints);
 group.add(tree);
-// group.add(leaves);
+group.add(leaves);
 // group.add(wireframe);
 
 return group;
