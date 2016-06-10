@@ -1,5 +1,6 @@
 
 function Version6() {
+  console.log("Tree version 6");
 
 
   // Builds faces between two slices.
@@ -29,8 +30,6 @@ function Version6() {
       }
     }
   }
-
-
 
   // Helps build up vertices in a geometry adding and connecting faces for a given array of "slices"
   // which are essentially arrays of vertices (probably from extrusion of 2D shapes).
@@ -63,10 +62,11 @@ function Version6() {
   }
 
 
-  function makeSlice(position, normal, shape) {
+  // Modifies a shape's vertices to be positions and oriented at the given position and direction.
+  function makeSlice(position, direction, shape) {
     var vertices = [];
     var q = new THREE.Quaternion();
-    q.setFromUnitVectors(Y_AXIS, normal);
+    q.setFromUnitVectors(Y_AXIS, direction);
 
     for (var i = 0; i < shape.length; i++) {
       var point = shape[i];
@@ -79,16 +79,14 @@ function Version6() {
     return vertices;
   }
 
-  function extrude(divisions, curve, shapeFunc) {
+  function extrude(divisions, func) {
     var geometry = new THREE.Geometry();
     var slices = [];
 
     for (var i = 0; i < divisions; i++) {
-      var offset = i / divisions;
-      var normal = curve.getTangent(offset);
-      var position = curve.getPoint(offset);
-      var shape = shapeFunc(offset);
-      var slice = makeSlice(position, normal, shape);
+      var offset = i / (divisions - 1);
+      var info = func(offset);
+      var slice = makeSlice(info.position, info.direction, info.shape);
       slices.push(slice);
     }
 
@@ -97,163 +95,182 @@ function Version6() {
   }
 
 
-  // TODO need a way to organize all the various parameters available
-  // - when and where to branch
-  // - radius of slice
-  // - shape of slice
-  // - length of branch
-  // - position of slice
-  // - direction of slice
 
-  function circle(radius, divisions) {
-    var shape = new THREE.Shape();
-    shape.absarc(0, 0, radius, 0, Math.PI * 2, false);
-    return shape.extractPoints(divisions).shape;
+function circle(radius) {
+  var shape = new THREE.Shape();
+  shape.absarc(0, 0, radius, 0, Math.PI * 2, false);
+  return shape;
+}
+
+function trendUpwards(node) {
+  node.direction.add(new Vec(0, 0.05, 0));
+}
+
+function jitterDirection(node) {
+  // Don't jitter nodes that are at the base of a trunk/branch because it renders weird
+  // TODO put this in more natural language, such as "tropism more likely as farther away
+  //      from base because less stability"
+  //      OR, maybe just make jitter at base very minimal
+  if (node.index > 2) {
+    node.direction.applyAxisAngle(X_AXIS, randomSmallRotation() * 0.25);
+    node.direction.applyAxisAngle(Y_AXIS, randomSmallRotation() * 0.25);
+    node.direction.applyAxisAngle(Z_AXIS, randomSmallRotation() * 0.25);
   }
+}
 
-  // TODO is this system of multiple passes too inefficient?
-  function jitterSlices(slices) {
-    for (var i = 0; i < slices.length; i) {
-      var slice = slices[i];
+function incrementBranchRotation(node) {
+  node.branchRotation += Math.PI * 2 / 4;
+}
 
-    }
+// Get a direction perpendicular to the base branch (parent node)
+function perpendicularToBranchDirection(node) {
+  var crossWith = Y_AXIS;
+  if (node.direction.equals(Y_AXIS)) {
+    crossWith = X_AXIS;
   }
+  return node.direction.clone().cross(crossWith).normalize();
+}
 
-  function trunkRandomRadiusAtOffset(startRadius, offset) {
-    return (1 - offset) * (startRadius + (Math.random() * 0.25 - 0.5));
+function initialTiltUpwards(node) {
+  node.direction.add(new Vec(0, 0.5, 0));
+}
+
+function diminishGrowthRate(node) {
+  node.growthRate *= 0.2;
+}
+
+// TODO Do you see newer branches below older branches? Does a node's ability to branch
+//      ever expire?
+// TODO relate branch point to age and distance to tip to simulate auxin and keep branches
+//      for forming at the base of the trunk.
+function attemptBranch(node) {
+  if (shouldBranch(node)) {
+
+    var direction = perpendicularToBranchDirection(node);
+    // Rotate around the trunk
+    direction.applyAxisAngle(node.direction, node.branchRotation);
+
+    var newNode = Node({
+      direction: direction,
+      depth: node.depth + 1,
+    });
+
+    initialTiltUpwards(newNode);
+    diminishGrowthRate(newNode);
+
+    node.branches.push(newNode);
   }
-
-function jitterDirection(direction) {
-  direction.applyAxisAngle(X_AXIS, randomSmallRotation() * 0.25);
-  direction.applyAxisAngle(Y_AXIS, randomSmallRotation() * 0.25);
-  direction.applyAxisAngle(Z_AXIS, randomSmallRotation() * 0.25);
 }
 
 
-function iterate(system) {
-  // TODO shallow copy is not ideal. Need to think about better data structures
-  // var copy = [];
-  // Array.prototype.push.apply(copy, system);
-  // TODO ensure this is robust enough and then rename copy
-  var copy = system;
+function iterateBranch(start, cb) {
+  var node = start;
+  var next = node.next;
+  cb(node);
 
-  var lastBranchIndex = -1;
+  while (next) {
+    node = next;
+    next = node.next;
+    cb(node);
+  }
+}
 
-  for (var i = 0, ii = system.length; i < ii; i++) {
-    var node = system[i];
+function extendTip(node) {
+  if (node.isTip) {
+    node.isTip = false;
+
+    if (node.depth > 1 && node.index > 5) return;
+
+    var newNode = Node({
+      index: i + 1,
+      depth: node.depth,
+      direction: node.direction.clone(),
+      growthRate: node.growthRate,
+      branchRotation: node.branchRotation,
+    });
+
+    trendUpwards(newNode);
+    jitterDirection(newNode);
+    incrementBranchRotation(newNode);
+    node.next = newNode;
+    newNode.previous = node;
+  }
+}
+
+function iterateNode(node) {
     node.age += 1;
-    var isTip = i == ii - 1;
+    extendTip(node);
+    incrementRadius(node);
+    incrementLength(node);
+    attemptBranch(node);
 
-    if (isTip) {
-
-      var direction = node.direction.clone();
-
-      // Don't jitter nodes that are at the base of a trunk/branch because it renders weird
-      // TODO put this in more natural language, such as "tropism more likely as farther away
-      //      from base because less stability"
-      //      OR, maybe just make jitter at base very minimal
-      if (i > 2) {
-        jitterDirection(direction);
-      }
-
-      // Trend upwards
-      direction.add(new Vec(0, 0.5, 0));
-
-      // TODO why splice?
-      // copy.splice(i + 1, 0, Node({
-      copy.push(Node({
-        radius: node.radius,
-        direction: direction,
-        growthRate: node.growthRate,
-        branchRotation: node.branchRotation + Math.PI * 2 / 3,
-      }));
+    // Iterate node's branches
+    for (var j = 0; j < node.branches.length; j++) {
+      iterateBranch(node.branches[j], iterateNode);
     }
-
-    // TODO should radius be absolute or relative?
-    node.radius += node.growthRate;
-    // node.length += node.growthRate;
-
-    // TODO would be interesting if the branch did actually rotate because the trunk was rotating
-    // TODO need better branch distribution. Rotation is not related to distance from last node.
-    //      or existing branch
-    // if (!node.hasBranch) {
-    //   node.branchRotation += 0.2;
-    // }
-
-    // TODO Do you see newer branches below older branches? Does a node's ability to branch
-    //      ever expire?
-    // TODO relate branch point to age and distance to tip to simulate auxin and keep branches
-    //      for forming at the base of the trunk.
-    if (
-      !node.hasBranch
-      && node.canBranch
-      && node.age > 5
-      && i > 2
-      // && i - lastBranchIndex > 3
-      && Math.random() < node.branchChance
-    ) {
-
-        node.hasBranch = true;
-        node.canBranch = false;
-
-        // Get a direction perpendicular to the base branch (parent node)
-        var perpendicular = node.direction.clone().cross(UP).normalize();
-
-        var branchDirection = perpendicular
-          .clone()
-          // Tilt slightly upwards
-          .add(new Vec(0, 0.7, 0))
-          // Rotate around the trunk
-          .applyAxisAngle(node.direction, node.branchRotation);
-
-        node.branch = [
-          Node({
-            direction: branchDirection,
-            growthRate: node.growthRate * 0.5,
-          })
-        ];
-    }
-
-    if (node.hasBranch) {
-      // TODO allow multiple branches
-      node.branch = iterate(node.branch);
-      lastBranchIndex = i;
-    }
-  }
-  return copy;
 }
 
+function shouldBranch(node) {
+  return node.branches.length == 0
+  && node.depth < 2
+  && node.index > 2
+  && node.age > 1
+  && Math.random() < 0.3 + (1 / node.age);
+}
 
+function incrementRadius(node) {
+  node.radius += node.growthRate;
+}
+
+function incrementLength(node) {
+  if (node.depth > 1 && node.age > 2) return;
+  node.length += node.growthRate;
+}
+
+function getShape(node) {
+  return circle(node.radius);
+}
+
+// TODO a big optimization could be to track an entire branch with one object
+//      rather than track many individual nodes that make up a branch.
+//      Or even merge the nodes inbetween branches together
+// TODO need a way to organize all the various parameters available
+// TODO should the system be a linked list?
 function Node(initial) {
   return Object.assign({
-    age: 0,
-    radius: 0,
+    index: 0,
+    depth: 0,
+    isTip: true,
+    age: 1,
+    radius: 0.01,
     length: 0.5,
     direction: UP.clone(),
-    offset: new Vec(0, 0, 0),
-    canBranch: true,
-    hasBranch: false,
-    branchChance: 0.3,
+    minBranchAge: 1,
+    branches: [],
+    branchChance: 0.5,
     branchRotation: 0,
     growthRate: 0.02,
+    next: null,
+    previous: null
   }, initial);
 }
 
 
-function systemToGeometry(system, startPosition) {
+function systemToGeometry(startNode, startPosition) {
 
-  // TODO shapes need to move into nodes, but that conflicts with being able to interpolate
-  //      along a path? Could drop interpolation and use the closest shape, and then consider
-  //      implementing shape interpolation in the future.
   var branches = new THREE.Geometry();
   var leaves = new THREE.Geometry();
+  // TODO this curve path is probably overkill. Not sure the nodes are even spaced out enough
+  //      for this curve to have any effect.
+  // TODO on the other hand, path is great for allowing the top-level to decide how to subdivide
+  //      the path into geometry
   var path = new THREE.CatmullRomCurve3([startPosition]);
-  var radiusCurve = new THREE.SplineCurve();
+  var shapes = [];
 
-  for (var i = 0; i < system.length; i++) {
-    var node = system[i];
-    var offset = i / (system.length - 1);
-    radiusCurve.points.push(new Vec2(offset, node.radius));
+  iterateBranch(startNode, function(node) {;
+
+    var shape = getShape(node).extractPoints(3).shape;
+    shapes.push(shape);
 
     var lastPoint = path.points[path.points.length - 1];
     var nextPoint = node.direction
@@ -262,21 +279,29 @@ function systemToGeometry(system, startPosition) {
       .add(lastPoint);
     path.points.push(nextPoint);
 
-    if (i == system.length - 1) {
-      leaves.vertices.push(lastPoint);
+    // TODO move leaves out of this function
+    if (node.next === null) {
+      leaves.vertices.push(nextPoint);
     }
 
-    // TODO allow multiple branches from one node?
-    if (node.hasBranch) {
-      var branchGeometries = systemToGeometry(node.branch, nextPoint);
+    for (var j = 0; j < node.branches.length; j++) {
+      var branchGeometries = systemToGeometry(node.branches[j], nextPoint);
       branches.merge(branchGeometries.branches);
       leaves.merge(branchGeometries.leaves);
     }
-  }
+  });
 
-  var trunkGeometry = extrude(5, path, function(offset) {
-    var radius = radiusCurve.getPoint(offset).y;
-    return circle(radius, 5);
+  var trunkGeometry = extrude(5, function(offset) {
+    // TODO this seems to be OK for now, but in the future I'd like to be able to interpolate
+    //      between two shapes
+    var index = Math.floor(offset * (shapes.length - 1));
+    var shape = shapes[index];
+
+    return {
+      direction: path.getTangent(offset),
+      position: path.getPoint(offset),
+      shape: shape,
+    };
   });
 
   // TODO strangely, the branches don't render without the trunk
@@ -289,18 +314,18 @@ function systemToGeometry(system, startPosition) {
 }
 
 
-var system = [Node()];
+var trunk = Node();
 
 // TODO an interesting idea is to have a fixed amount of energy which can be distributed
 //      throughout the system on each iteration. This might have the effect of modulating
 //      trunk/branch growth as the tree gets bigger.
 
 for (var i = 0; i < 30; i++) {
-  system = iterate(system);
+  iterateBranch(trunk, iterateNode);
 }
 
 var startPosition = new Vec(0, 0, 0);
-var geometries = systemToGeometry(system, startPosition);
+var geometries = systemToGeometry(trunk, startPosition);
 
 console.log("Branches vertex count", geometries.branches.vertices.length);
 console.log("Leaves vertex count", geometries.leaves.vertices.length);
