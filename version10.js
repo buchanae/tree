@@ -101,8 +101,6 @@ function randomVector() {
 
 
 /****************************************************************************/
-var seed = Math.seedrandom();
-console.log("Seed", btoa(seed));
 
 // TODO I have mixed feelings about this style. Writing it all out makes the flow clearer
 //      and reduces the overhead of all the little functions existing, but it's not composable.
