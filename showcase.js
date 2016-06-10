@@ -18,7 +18,7 @@ function Showcase(tree, container) {
 
   camera.position.x = 0;
   camera.position.y = 5;
-  camera.position.z = 17;
+  camera.position.z = 20;
   camera.lookAt(new Vec(0, 12, 0));
 
   // Top down
