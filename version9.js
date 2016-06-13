@@ -1,5 +1,13 @@
+var seedrandom = require('seedrandom');
+var THREE = require('three');
+var common = require('./common');
+var X_AXIS = common.X_AXIS;
+var Y_AXIS = common.Y_AXIS;
+var Z_AXIS = common.Z_AXIS;
+var Vec = common.Vec;
 
-function Version9() {
+
+module.exports = function Version9() {
   console.log("Tree version 9");
 
 
@@ -101,7 +109,7 @@ function randomVector() {
 
 
 /****************************************************************************/
-var seed = Math.seedrandom();
+var seed = seedrandom();
 console.log("Seed", btoa(seed));
 
 // TODO I have mixed feelings about this style. Writing it all out makes the flow clearer
@@ -235,7 +243,7 @@ function Node(initial) {
     age: 1,
     length: 0.5,
     scale: 1,
-    direction: UP.clone(),
+    direction: Y_AXIS.clone(),
     branches: [],
     leaves: [],
     branchRotation: 0,

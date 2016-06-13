@@ -1,5 +1,15 @@
+var THREE = require('three');
+var common = require('./common');
+var X_AXIS = common.X_AXIS;
+var Y_AXIS = common.Y_AXIS;
+var Z_AXIS = common.Z_AXIS;
+var Vec = common.Vec;
+var Vec2 = common.Vec2;
+var randomRange = common.randomRange;
+var randomSmallRotation = common.randomSmallRotation;
+var randomRotation = common.randomRotation;
 
-function Version2() {
+module.exports = function Version2() {
 
 
   // Builds faces between two slices.

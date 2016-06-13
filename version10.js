@@ -1,7 +1,9 @@
+var THREE = require('three');
+var common = require('./common');
+var Vec = common.Vec;
 
-function Version10() {
+module.exports = function Version10() {
   console.log("Tree version 10");
-
 
 // Builds faces between two slices.
 // A and B are arrays of numbers pointing to entries in an array of vertices,
@@ -73,9 +75,9 @@ function circle(radius) {
 
 // Get a direction perpendicular to the base branch (parent node)
 function perpendicularToBranchDirection(node) {
-  var crossWith = Y_AXIS;
-  if (node.direction.equals(Y_AXIS)) {
-    crossWith = X_AXIS;
+  var crossWith = common.Y_AXIS;
+  if (node.direction.equals(common.Y_AXIS)) {
+    crossWith = common.X_AXIS;
   }
   return node.direction.clone().cross(crossWith).normalize();
 }
@@ -215,9 +217,9 @@ function jitterDirection(direction, x, y, z) {
     var xRange = Math.PI * 2 * x;
     var yRange = Math.PI * 2 * y;
     var zRange = Math.PI * 2 * z;
-    direction.applyAxisAngle(X_AXIS, Math.random() * xRange - xRange / 2);
-    direction.applyAxisAngle(Y_AXIS, Math.random() * yRange - yRange / 2);
-    direction.applyAxisAngle(Z_AXIS, Math.random() * zRange - zRange / 2);
+    direction.applyAxisAngle(common.X_AXIS, Math.random() * xRange - xRange / 2);
+    direction.applyAxisAngle(common.Y_AXIS, Math.random() * yRange - yRange / 2);
+    direction.applyAxisAngle(common.Z_AXIS, Math.random() * zRange - zRange / 2);
 }
 
 function jitterShape(shape) {
@@ -235,7 +237,7 @@ function Node(initial) {
     age: 1,
     length: 0.5,
     scale: 1,
-    direction: UP.clone(),
+    direction: common.UP.clone(),
     branches: [],
     leaves: [],
     branchRotation: 0,
@@ -250,7 +252,7 @@ function Node(initial) {
 function getShape(node) {
   var vertices = [];
   var q = new THREE.Quaternion();
-  q.setFromUnitVectors(Y_AXIS, node.direction);
+  q.setFromUnitVectors(common.Y_AXIS, node.direction);
 
   for (var i = 0; i < node.shape.length; i++) {
     var point = node.shape[i];
@@ -328,7 +330,7 @@ var geometries = systemToGeometry(trunk, startPosition);
 console.log("Branches vertex count", geometries.branches.vertices.length);
 console.log("Leaves vertex count", geometries.leaves.vertices.length);
 
-geometries.branches.computeBoundingSphere();
+geometries.branches.computeBoundingBox();
 // Face normals are needed when rendering Lambert/Phong or other materials affected by light
 geometries.branches.computeFaceNormals();
 // Vertex normals are used to render a smoothed mesh
@@ -368,6 +370,4 @@ group.add(leaves);
 // group.add(wireframe);
 
 return group;
-
-
 }

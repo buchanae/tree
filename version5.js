@@ -1,5 +1,12 @@
+var THREE = require('three');
+var common = require('./common');
+var X_AXIS = common.X_AXIS;
+var Y_AXIS = common.Y_AXIS;
+var Z_AXIS = common.Z_AXIS;
+var Vec = common.Vec;
 
-function Version5() {
+
+module.exports = function Version5() {
 
 
   // Builds faces between two slices.
@@ -124,9 +131,9 @@ function Version5() {
   }
 
 function jitterDirection(direction) {
-  direction.applyAxisAngle(X_AXIS, randomSmallRotation() * 0.25);
-  direction.applyAxisAngle(Y_AXIS, randomSmallRotation() * 0.25);
-  direction.applyAxisAngle(Z_AXIS, randomSmallRotation() * 0.25);
+  direction.applyAxisAngle(X_AXIS, common.randomSmallRotation() * 0.25);
+  direction.applyAxisAngle(Y_AXIS, common.randomSmallRotation() * 0.25);
+  direction.applyAxisAngle(Z_AXIS, common.randomSmallRotation() * 0.25);
 }
 
 
@@ -197,7 +204,7 @@ function iterate(system) {
         node.canBranch = false;
 
         // Get a direction perpendicular to the base branch (parent node)
-        var perpendicular = node.direction.clone().cross(UP).normalize();
+        var perpendicular = node.direction.clone().cross(Y_AXIS).normalize();
 
         var branchDirection = perpendicular
           .clone()
@@ -229,7 +236,7 @@ function Node(initial) {
     age: 0,
     radius: 0,
     length: 0.5,
-    direction: UP.clone(),
+    direction: Y_AXIS.clone(),
     offset: new Vec(0, 0, 0),
     canBranch: true,
     hasBranch: false,
@@ -253,7 +260,7 @@ function systemToGeometry(system, startPosition) {
   for (var i = 0; i < system.length; i++) {
     var node = system[i];
     var offset = i / (system.length - 1);
-    radiusCurve.points.push(new Vec2(offset, node.radius));
+    radiusCurve.points.push(new common.Vec2(offset, node.radius));
 
     var lastPoint = path.points[path.points.length - 1];
     var nextPoint = node.direction

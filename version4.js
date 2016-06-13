@@ -1,5 +1,12 @@
+var THREE = require('three');
+var common = require('./common');
+var X_AXIS = common.X_AXIS;
+var Y_AXIS = common.Y_AXIS;
+var Z_AXIS = common.Z_AXIS;
+var Vec = common.Vec;
 
-function Version4() {
+
+module.exports = function Version4() {
 
 
   // Builds faces between two slices.
@@ -134,17 +141,17 @@ function Version4() {
   };
   trunk.path = new THREE.LineCurve3(new Vec(0, 0, 0), new Vec(0, trunk.height, 0));
 
-  var radiusCurvePoints = [new Vec2(0, 1)];
+  var radiusCurvePoints = [new common.Vec2(0, 1)];
 
   // Taper and randomize radii
   for (var i = 0; i < 10; i++) {
     var offset = i / 10;
-    radiusCurvePoints.push(new Vec2(
+    radiusCurvePoints.push(new common.Vec2(
       offset,
       trunkRandomRadiusAtOffset(trunk.startRadius, offset)
     ));
   }
-  radiusCurvePoints.push(new Vec2(1, 0.05));
+  radiusCurvePoints.push(new common.Vec2(1, 0.05));
   trunk.radiusCurve = new THREE.SplineCurve(radiusCurvePoints);
 
   trunk.geometry = extrude(trunk.numberOfSlices, trunk.path, function(offset) {
@@ -177,8 +184,8 @@ function Version4() {
     var midPoint = path.getPoint(0.5);
     midPoint.add(new Vec(0, 0.5, 0));
     path.points.splice(1, 0, midPoint);
-    
-    var radiusCurve = new THREE.LineCurve(new Vec2(0, startRadius), new Vec2(1, 0));
+
+    var radiusCurve = new THREE.LineCurve(new common.Vec2(0, startRadius), new common.Vec2(1, 0));
 
     var geometry = extrude(5, path, function(offset) {
       var radius = radiusCurve.getPoint(offset).y;
@@ -206,7 +213,7 @@ function Version4() {
 
     var perpendicular = direction
       .clone()
-      .cross(UP)
+      .cross(Y_AXIS)
       .normalize();
 
     var endPosition = perpendicular

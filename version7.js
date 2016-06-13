@@ -1,5 +1,12 @@
+var THREE = require('three');
+var common = require('./common');
+var X_AXIS = common.X_AXIS;
+var Y_AXIS = common.Y_AXIS;
+var Z_AXIS = common.Z_AXIS;
+var Vec = common.Vec;
 
-function Version7() {
+
+module.exports = function Version7() {
   console.log("Tree version 7");
 
 
@@ -151,9 +158,9 @@ function jitterDirection(node) {
   //      from base because less stability"
   //      OR, maybe just make jitter at base very minimal
   if (node.index > 2) {
-    node.direction.applyAxisAngle(X_AXIS, randomSmallRotation());
-    node.direction.applyAxisAngle(Y_AXIS, randomSmallRotation() * 0.5);
-    node.direction.applyAxisAngle(Z_AXIS, randomSmallRotation() * 0.5);
+    node.direction.applyAxisAngle(X_AXIS, common.randomSmallRotation());
+    node.direction.applyAxisAngle(Y_AXIS, common.randomSmallRotation() * 0.5);
+    node.direction.applyAxisAngle(Z_AXIS, common.randomSmallRotation() * 0.5);
   }
 }
 
@@ -247,7 +254,7 @@ function Node(initial) {
     age: 1,
     radius: 0.01,
     length: 0.5,
-    direction: UP.clone(),
+    direction: Y_AXIS.clone(),
     minBranchAge: 1,
     branches: [],
     branchChance: 0.5,
