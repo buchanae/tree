@@ -11,6 +11,7 @@ var versions = [
   require('./version8'),
   require('./version9'),
   require('./version10'),
+  require('./version11'),
 ];
 
 module.exports = {

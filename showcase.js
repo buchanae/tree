@@ -39,9 +39,6 @@ var CameraFitUtils = {
 };
 
 module.exports = function Showcase(tree, container) {
-  var bbox = new THREE.Box3();
-  bbox.setFromObject(tree);
-
   var scene = new THREE.Scene();
   scene.add(tree);
 
@@ -63,9 +60,10 @@ module.exports = function Showcase(tree, container) {
   // scene.add(bboxHelper);
 
   var camera = new THREE.PerspectiveCamera(75, aspectRatio, 0.1, 1000);
-  var position = CameraFitUtils.solveForDistance(camera, bbox);
 
-  camera.position.copy(position);
+  camera.position.set(0, 25, 45);
+  camera.lookAt(new THREE.Vector3(0, 25, 0));
+
   // camera.position.y = bbox.max.y * 0.1;
   // camera.position.y = bbox.max.y;
   // camera.lookAt(new Vec(0, bbox.max.y / 2 - 2, 0));
@@ -91,8 +89,15 @@ module.exports = function Showcase(tree, container) {
 
 
   function render() {
-    requestAnimationFrame( render );
-    renderer.render( scene, camera );
+    requestAnimationFrame(render);
+
+    // TODO doesn't work for growing
+    // var bbox = new THREE.Box3();
+    // bbox.setFromObject(tree);
+    // var position = CameraFitUtils.solvePosition(camera, bbox);
+    // camera.position.copy(position);
+
+    renderer.render(scene, camera);
   }
   render();
 }

@@ -1,5 +1,6 @@
 var main = require('./main');
 
 var container = document.getElementById("container");
-var tree = main.versions.Version1();
+var version = 11;
+var tree = main.versions[version - 1]();
 main.Showcase(tree, container);
