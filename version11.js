@@ -13,32 +13,7 @@ module.exports = function Version11() {
   console.log("Tree version 11");
 
 
-  // Builds faces between two slices.
-  // A and B are arrays of vertex IDs.
-  //
-  // Currently, A and B are expected to be the same length.
-  function connectSlices(geometry, A, B) {
-    var Face3 = THREE.Face3;
 
-    for (var i = 0; i < A.length; i++) {
-      var A_index = A[i];
-      var B_index = B[i];
-
-      // Connect layers into faces
-      // The last vertex is a special case because it must connect back to the first vertex.
-      if (i == A.length - 1) {
-        var A_first_index = A[0];
-        var B_first_index = B[0];
-        geometry.faces.push(new Face3(B_index, A_index, A_first_index));
-        geometry.faces.push(new Face3(B_index, A_first_index, B_first_index));
-      } else {
-        var A_next_index = A[i + 1];
-        var B_next_index = B[i + 1];
-        geometry.faces.push(new Face3(B_index, A_index, A_next_index));
-        geometry.faces.push(new Face3(B_index, A_next_index, B_next_index));
-      }
-    }
-  }
 
 
 
@@ -101,7 +76,7 @@ module.exports = function Version11() {
         } else {
           var numberOfLeaves = 0;
         }
-        
+
         var leafDistance = 2;
         for (var i = 0; i < numberOfLeaves; i++) {
           var color = new THREE.Color();
@@ -269,33 +244,153 @@ module.exports = function Version11() {
 
 
     function addVertices(geometry, vertices) {
-      var ids = [];
-      for (var i = 0; i < vertices.length; i++) {
-        geometry.vertices.push(vertices[i]);
-        var id = geometry.vertices.length - 1;
-        ids.push(id);
-      }
-      return ids;
+
     }
 
     function Geometries() {
       this.shapeDivisions = 5;
-      this.branches = new THREE.Geometry();
-      this.leaves = new THREE.Geometry();
+      this.maxBranchVertices = 20000;
+      this.maxLeafVertices = 5000;
+
+      this.branches = new THREE.BufferGeometry();
+      this.leaves = new THREE.BufferGeometry();
+
+      this.branchVertices = new Float32Array(this.maxBranchVertices * 3);
+      // this.branchNormals = new Float32Array(this.maxBranchVertices * 3);
+      this.branchFaces = new Uint32Array(this.maxBranchVertices);
+
+      this.leafVertices = new Float32Array(this.maxLeafVertices * 3);
+      this.leafColors = new Float32Array(this.maxLeafVertices * 3);
+
+      this.branches.addAttribute("position", new THREE.BufferAttribute(this.branchVertices, 3));
+      // this.branches.addAttribute("normal", new THREE.BufferAttribute(this.branchNormals, 3));
+
+      this.branches.setIndex(new THREE.BufferAttribute(this.branchFaces, 1));
+
+      this.leaves.addAttribute("position", new THREE.BufferAttribute(this.leafVertices, 3));
+      this.leaves.addAttribute("color", new THREE.BufferAttribute(this.leafColors, 3));
+
+      this.resetIds();
+    }
+
+    Geometries.prototype.resetIds = function() {
+      this.branchVertexId = 0;
+      this.branchFaceId = 0;
+      this.leafVertexId = 0;
+      this.leafColorId = 0;
+    };
+
+    Geometries.prototype.finalize = function() {
+      this.branches.setDrawRange(0, this.branchVertexId);
+      this.leaves.setDrawRange(0, this.leafVertexId);
+    };
+
+    // Geometries.prototype._addFace = function(ai, bi, ci) {
+    //   var pA = new THREE.Vector3();
+    //   var pB = new THREE.Vector3();
+    //   var pC = new THREE.Vector3();
+    //
+    //   var cb = new THREE.Vector3();
+    //   var ab = new THREE.Vector3();
+    //
+    //   var ax = this.branchVertices[ai];
+    //   var ay = this.branchVertices[ai + 1];
+    //   var az = this.branchVertices[ai + 2];
+    //
+    //   var bx = this.branchVertices[bi];
+    //   var by = this.branchVertices[bi + 1];
+    //   var bz = this.branchVertices[bi + 2];
+    //
+    //   var cx = this.branchVertices[ci];
+    //   var cy = this.branchVertices[ci + 1];
+    //   var cz = this.branchVertices[ci + 2];
+    //
+    //   // flat face normals
+    //   pA.set( ax, ay, az );
+    //   pB.set( bx, by, bz );
+    //   pC.set( cx, cy, cz );
+    //   cb.subVectors( pC, pB );
+    //   ab.subVectors( pA, pB );
+    //   cb.cross( ab );
+    //   cb.normalize();
+    //   var nx = cb.x;
+    //   var ny = cb.y;
+    //   var nz = cb.z;
+    //
+    //   this.branchNormals[ai] = nx;
+    //   this.branchNormals[ai + 1] = ny;
+    //   this.branchNormals[ai + 2] = nz;
+    //
+    //   this.branchNormals[bi] = nx;
+    //   this.branchNormals[bi + 1] = ny;
+    //   this.branchNormals[bi + 2] = nz;
+    //
+    //   this.branchNormals[ci] = nx;
+    //   this.branchNormals[ci + 1] = ny;
+    //   this.branchNormals[ci + 2] = nz;
+    // };
+
+    // Builds faces between two slices.
+    // A and B are arrays of vertex IDs.
+    //
+    // Currently, A and B are expected to be the same length.
+    Geometries.prototype.connectSlices = function(A, B) {
+      for (var i = 0; i < A.length; i++) {
+        var A_index = A[i];
+        var B_index = B[i];
+
+        // Connect layers into faces
+        // The last vertex is a special case because it must connect back to the first vertex.
+        if (i == A.length - 1) {
+          var A_next = A[0];
+          var B_next = B[0];
+        } else {
+          var A_next = A[i + 1];
+          var B_next = B[i + 1];
+        }
+
+        this.branchFaces[this.branchFaceId++] = B_index;
+        this.branchFaces[this.branchFaceId++] = A_index;
+        this.branchFaces[this.branchFaceId++] = A_next;
+        this.branchFaces[this.branchFaceId++] = B_index;
+        this.branchFaces[this.branchFaceId++] = A_next;
+        this.branchFaces[this.branchFaceId++] = B_next;
+      }
     }
 
     Geometries.prototype.addNode = function(node) {
-      var shape = getShape(node, this.shapeDivisions);
-      node.shapeVertexIds = addVertices(this.branches, shape);
-      if (node.parent) {
-        connectSlices(this.branches, node.parent.shapeVertexIds, node.shapeVertexIds);
+      var vertices = getShape(node, this.shapeDivisions);
+
+      var ids = [];
+      for (var i = 0; i < vertices.length; i++) {
+        ids.push(this.branchVertexId / 3);
+        this.branchVertices[this.branchVertexId++] = vertices[i].x;
+        this.branchVertices[this.branchVertexId++] = vertices[i].y;
+        this.branchVertices[this.branchVertexId++] = vertices[i].z;
       }
+      node.shapeVertexIds = ids;
+
+      if (node.parent) {
+        this.connectSlices(node.parent.shapeVertexIds, node.shapeVertexIds);
+      }
+
+
       // TODO at some point, need to close the last node faces
+      this.branches.index.needsUpdate = true;
+      this.branches.attributes.position.needsUpdate = true;
+      // this.branches.attributes.normal.needsUpdate = true;
     };
 
     Geometries.prototype.addLeaf = function(leaf) {
-      this.leaves.vertices.push(leaf.globalPosition);
-      this.leaves.colors.push(leaf.color);
+      this.leafVertices[this.leafVertexId++] = leaf.globalPosition.x;
+      this.leafVertices[this.leafVertexId++] = leaf.globalPosition.y;
+      this.leafVertices[this.leafVertexId++] = leaf.globalPosition.z;
+      this.leafColors[this.leafColorId++] = leaf.color.r;
+      this.leafColors[this.leafColorId++] = leaf.color.g;
+      this.leafColors[this.leafColorId++] = leaf.color.b;
+
+      this.leaves.attributes.position.needsUpdate = true;
+      this.leaves.attributes.color.needsUpdate = true;
     };
 
 
@@ -304,9 +399,11 @@ module.exports = function Version11() {
     //      trunk/branch growth as the tree gets bigger.
 
     var currentIteration = 0;
-    var maxIterations = 150;
-    var iterationTimeout = 50; // milliseconds
+    var maxIterations = 300;
+    var iterationTimeout = 25; // milliseconds
+    var timestep = 0.125;
     var group = new THREE.Group();
+    var geometries = new Geometries();
 
     var nodes = [Node()];
 
@@ -315,6 +412,7 @@ module.exports = function Version11() {
     //   doIteration();
     // }
 
+    // var treeMaterial = new THREE.MeshBasicMaterial({ color: 0x444444 });
     var treeMaterial = new THREE.MeshLambertMaterial({ color: 0x444444 });
 
     // TODO Do I want per-leaf size?
@@ -334,11 +432,10 @@ module.exports = function Version11() {
         return;
       }
       currentIteration += 1;
-      var timestep = 0.25;
-
-      var geometries = new Geometries();
+      geometries.resetIds();
 
       // Iterate nodes
+      var start = Date.now();
       var newNodes = [];
       nodes.forEach(function(node) {
 
@@ -369,26 +466,25 @@ module.exports = function Version11() {
         }
 
         if (node.type == 'leaf') {
-          if (!node.dead) {
-            geometries.addLeaf(node);
-          }
+          geometries.addLeaf(node);
         } else {
           geometries.addNode(node);
         }
       });
-      // TODO these should get added to the geometries
+      console.log("iteration time", Date.now() - start);
+
       Array.prototype.push.apply(nodes, newNodes);
 
-
       console.log("Node count", nodes.length);
-      console.log("Branches vertex count", geometries.branches.vertices.length);
-      console.log("Leaves vertex count", geometries.leaves.vertices.length);
+      console.log("Branches vertex count", geometries.branchVertexId);
+      console.log("Leaves vertex count", geometries.leafVertexId);
 
+      geometries.finalize();
       geometries.branches.computeBoundingSphere();
       // Face normals are needed when rendering Lambert/Phong or other materials affected by light
       geometries.branches.computeFaceNormals();
       // Vertex normals are used to render a smoothed mesh
-      geometries.branches.computeVertexNormals();
+      // geometries.branches.computeVertexNormals();
 
       var treeMesh = new THREE.Mesh(geometries.branches, treeMaterial);
       var leavesMesh = new THREE.Points(geometries.leaves, leavesMaterial);
