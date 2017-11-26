@@ -15,8 +15,6 @@ module.exports = function Version11() {
 
 
 
-
-
   function circle(radius) {
     var shape = new THREE.Shape();
     shape.absarc(0, 0, radius, 0, Math.PI * 2, false);
@@ -398,16 +396,25 @@ module.exports = function Version11() {
     //      throughout the system on each iteration. This might have the effect of modulating
     //      trunk/branch growth as the tree gets bigger.
 
-    var currentIteration = 0;
-    var maxIterations = 300;
-    var iterationTimeout = 25; // milliseconds
     var timestep = 0.125;
     var group = new THREE.Group();
     var geometries = new Geometries();
-
     var nodes = [Node()];
 
-    var interval = setInterval(doIteration, iterationTimeout);
+
+    // Grow over time
+    var iterationTimeout = 25; // milliseconds
+    var currentIteration = 0;
+    var maxIterations = 300;
+    var interval = setInterval(function() {
+      if (currentIteration >= maxIterations) {
+        clearInterval(interval);
+        return;
+      }
+      currentIteration += 1;
+    }, iterationTimeout);
+
+
     // for (var i = 0; i < maxIterations; i++) {
     //   doIteration();
     // }
@@ -427,11 +434,6 @@ module.exports = function Version11() {
 
 
     function doIteration() {
-      if (currentIteration >= maxIterations) {
-        clearInterval(interval);
-        return;
-      }
-      currentIteration += 1;
       geometries.resetIds();
 
       // Iterate nodes
@@ -489,6 +491,7 @@ module.exports = function Version11() {
       var treeMesh = new THREE.Mesh(geometries.branches, treeMaterial);
       var leavesMesh = new THREE.Points(geometries.leaves, leavesMaterial);
 
+      // Reset group?
       // TODO if you leave this out, you get a trippy bulid-up effect
       group.remove.apply(group, group.children);
 

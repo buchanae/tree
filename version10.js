@@ -1,9 +1,260 @@
-var THREE = require('three');
+/*
+Ideas / Wants / TODOs
+
+per-leaf size
+
+have a fixed amount of energy which can be distributed
+throughout the system on each iteration. This might have the effect of modulating
+trunk/branch growth as the tree gets bigger.
+
+****************************************************************************/
+
+
+//var THREE = require('three');
 var common = require('./common');
 var Vec = common.Vec;
+var main = require('./main');
 
-module.exports = function Version10() {
+module.exports = function Version10(container) {
   console.log("Tree version 10");
+
+  var gui = new dat.GUI();
+  var root = new THREE.Group();
+  var info = {
+    msg: "",
+  };
+  var opts = {
+    years: 25,
+    seed: 11,
+    shapeDivisions: 10,
+    render: true,
+    rotate: true,
+    wireframe: false,
+    color: "#874242",
+    leafColor: "#00ff00",
+    wireframeColor: "#00ff00",
+    levels: [],
+    drawLeaves: false,
+  }
+
+  var levelOpts = {
+    jitterShape: 0,
+    jitterDirection: 0.01,
+    thickness: 0,
+    growth: 0,
+    upness: 0.01,
+
+    leafDistance: 5,
+    numberOfLeaves: 5,
+
+    minJitterIndex: 3,
+    maxBranchDepth: 2,
+    minBranchIndex: 10,
+    minBranchAge: 1,
+    maxBranchAge: 100,
+    branchChance: 0.1,
+  };
+                
+  var modifer = new THREE.SimplifyModifier();
+  var rand = new Random(opts.seed);
+  var ctrl = {
+    refresh: function() {
+      rand = new Random(opts.seed);
+      // Everything starts here.
+      // The result and return value is a THREE.js geometry, which is rendered by the calling code.
+      var trunk = [Node()];
+
+      // Grow tree.
+      // Time is measured in "years".
+      for (var year = 0; year < opts.years; year++) {
+        GrowBranch(trunk, year, opts)
+      }
+
+      // Convert tree model to geometry which can be rendered.
+      var geometries = buildTreeGeometry(trunk, opts);
+      //geometries.branches = modifer.modify(geometries.branches, geometries.branches.vertices.length * 0.5 | 0);
+      var geo = trunkToGeometry(geometries, opts);
+      info.msg = geometries.branches.vertices.length + " " +
+                 geometries.leaves.vertices.length + " " +
+                 trunk.length;
+
+      // Reset group
+      root.remove.apply(root, root.children)
+      root.add(geo);
+      showcase.fit();
+    },
+  };
+
+  var showcase = main.Showcase(root, opts, container);
+  gui.add(ctrl, "refresh");
+  gui.add(showcase, "fit");
+  gui.add(info, "msg").listen();
+  gui.add(opts, "rotate");
+  gui.add(opts, "render");
+  gui.add(root.rotation, "y", 0, Math.PI * 2);
+  gui.add(opts, "wireframe").onChange(ctrl.refresh);
+
+  var ctrlGui = gui.addFolder("Control")
+  ctrlGui.add(opts, "years", 1, 100).onChange(ctrl.refresh);
+  ctrlGui.add(opts, "seed", 0, 1000).onFinishChange(ctrl.refresh);
+  ctrlGui.add(opts, "shapeDivisions", 3, 20).step(1).onChange(ctrl.refresh);
+  ctrlGui.addColor(opts, "color").onChange(ctrl.refresh);
+  ctrlGui.addColor(opts, "leafColor").onChange(ctrl.refresh);
+  ctrlGui.add(opts, "drawLeaves").onChange(ctrl.refresh);
+
+  function addLevel(name) {
+    var g = gui.addFolder(name)
+    var o = Object.assign({}, levelOpts);
+    opts.levels.push(o)
+    g.add(o, "thickness", 0, 10).onChange(ctrl.refresh);
+    g.add(o, "growth", 0, 0.1).onChange(ctrl.refresh);
+    g.add(o, "upness", -1, 1).step(0.01).onChange(ctrl.refresh);
+    g.add(o, "jitterShape", 0, 2).step(0.03).onChange(ctrl.refresh);
+    g.add(o, "jitterDirection", 0, 0.1).step(0.01).onChange(ctrl.refresh);
+    g.add(o, "minJitterIndex", 0, 50).step(1).onChange(ctrl.refresh);
+    g.add(o, "maxBranchDepth", 1, 20).step(1).onChange(ctrl.refresh);
+    g.add(o, "minBranchIndex", 1, 20).step(1).onChange(ctrl.refresh);
+    g.add(o, "maxBranchAge", 1, 20).step(1).onChange(ctrl.refresh);
+    g.add(o, "minBranchAge", 1, 50).step(1).onChange(ctrl.refresh);
+    g.add(o, "branchChance", 0, 1).onChange(ctrl.refresh);
+    g.add(o, "leafDistance", 1, 20).onChange(ctrl.refresh);
+    g.add(o, "numberOfLeaves", 0, 20).onChange(ctrl.refresh);
+  }
+  addLevel("Trunk")
+  addLevel("First")
+  addLevel("Second")
+  addLevel("Third")
+  //ctrl.refresh();
+
+  //gui.remember(opts);
+
+
+  ctrl.refresh();
+  showcase.fit();
+
+function Node(initial) {
+  return Object.assign({
+    index: 0,
+    depth: 0,
+    age: 1,
+    length: 0.05,
+    scale: 1,
+    direction: common.UP.clone(),
+    // Each node may have a list of branches starting at this node.
+    branches: [],
+    // Each node may have a list of leaves attached to this node.
+    leaves: [],
+    branchRotation: 0,
+    shape: circle(0.01, opts),
+  }, initial);
+}
+
+
+// This is the main controller of the model.
+function GrowBranch(branch, year, opts) {
+
+  var tipIndex = branch.length - 1;
+  var tip = branch[tipIndex];
+  var lopts = opts.levels[tip.depth];
+  var newNode = Node({
+    index: branch.length,
+    depth: tip.depth,
+    direction: tip.direction.clone(),
+  });
+
+  // Trend upwards
+  if (newNode.depth > 0 && newNode.depth < 3) {
+    newNode.direction.y += lopts.upness;
+  }
+
+  if (newNode.index > lopts.minJitterIndex) {
+    jitterDirection(newNode.direction, lopts.jitterDirection, 0.001, lopts.jitterDirection);
+  }
+
+  jitterShape(newNode.shape, lopts.jitterShape);
+
+  branch.push(newNode);
+
+  // Generate leaves
+  for (var i = 0; i < lopts.numberOfLeaves; i++) {
+    // TODO interesting that this affects tree shape,
+    //      because it's consuming random numbers that would otherwise
+    //      be used to shape the branches/nodes.
+    var color = new THREE.Color();
+    color.setHSL(0, rand.nextFloat(), rand.nextFloat() + 0.2);
+    newNode.leaves.push({
+      vertex: randomVector().setLength(lopts.leafDistance),
+      //color: color,
+    })
+  }
+
+
+  for (var i = 0; i < branch.length; i++) {
+    GrowNode(branch[i], year, opts)
+    for (var j = 0; j < branch[i].branches.length; j++) {
+      GrowBranch(branch[i].branches[j], year, opts)
+    }
+  }
+}
+
+function GrowNode(n, year, opts) {
+  var lopts = opts.levels[n.depth];
+  n.age += 1;
+  n.scale += lopts.thickness;
+  n.length += lopts.growth;
+
+/*
+  // Diminish the leaves with age
+  if (n.leaves.length > 0) {
+    if (n.age > 7) {
+      n.leaves.length = 0;
+    } else if (n.age > 3) {
+      n.leaves.length -= Math.floor(rand.nextFloat() * 0.3 * n.leaves.length);
+    }
+  }
+
+  // Scale shape
+  if (n.age > 10) {
+    n.scale += opts.thickness;
+  } else {
+    n.scale += 1;
+  }
+*/
+
+
+  if (
+    n.branches.length == 0
+    && n.depth < lopts.maxBranchDepth
+    && n.index > lopts.minBranchIndex
+    && n.age > lopts.minBranchAge
+    && n.age < lopts.maxBranchAge
+    && rand.nextFloat() < lopts.branchChance
+  ) {
+    var bopts = opts.levels[n.depth + 1];
+    var direction = perpendicularToBranchDirection(n);
+    direction.y += bopts.upness;
+
+    // Jitter direction
+    jitterDirection(direction, bopts.jitterDirection, 0.0, bopts.jitterDirection)
+
+    // Rotate around the trunk
+    direction.applyAxisAngle(n.direction, randomAngle());
+
+    var newNode = Node({
+      direction: direction,
+      depth: n.depth + 1,
+    });
+
+    n.branches.push([newNode]);
+  }
+}
+
+
+
+
+// Utilities
+/****************************************************************************/
+
 
 // Builds faces between two slices.
 // A and B are arrays of numbers pointing to entries in an array of vertices,
@@ -22,13 +273,13 @@ function connectSlices(geometry, A, B) {
     if (i == A.length - 1) {
       var A_first_index = A[0];
       var B_first_index = B[0];
-      geometry.faces.push(new Face3(B_index, A_index, A_first_index));
-      geometry.faces.push(new Face3(B_index, A_first_index, B_first_index));
+      //geometry.faces.push(new Face3(B_index, A_index, A_first_index));
+      //geometry.faces.push(new Face3(B_index, A_first_index, B_first_index));
     } else {
       var A_next_index = A[i + 1];
       var B_next_index = B[i + 1];
-      geometry.faces.push(new Face3(B_index, A_index, A_next_index));
-      geometry.faces.push(new Face3(B_index, A_next_index, B_next_index));
+      geometry.faces.push(new Face3(A_index, B_index, B_next_index));
+      geometry.faces.push(new Face3(A_index, B_next_index, A_next_index));
     }
   }
 }
@@ -66,10 +317,10 @@ function extrude(divisions, paths) {
   return geometry;
 }
 
-function circle(radius) {
+function circle(radius, opts) {
   var shape = new THREE.Shape();
   shape.absarc(0, 0, radius, 0, Math.PI * 2, false);
-  return shape.getPoints(5);
+  return shape.getPoints(opts.shapeDivisions);
 }
 
 
@@ -82,174 +333,42 @@ function perpendicularToBranchDirection(node) {
   return node.direction.clone().cross(crossWith).normalize();
 }
 
-function iterateBranch(start, cb) {
-  var node = start;
-  var next = node.next;
-  cb(node);
-
-  while (next) {
-    node = next;
-    next = node.next;
-    cb(node);
-  }
-}
-
 function randomVector() {
   return new Vec(
-    Math.random() * 2 - 1,
-    Math.random() * 2 - 1,
-    Math.random() * 2 - 1);
-}
-
-
-/****************************************************************************/
-
-// TODO I have mixed feelings about this style. Writing it all out makes the flow clearer
-//      and reduces the overhead of all the little functions existing, but it's not composable.
-//      I guess I'm shooting for something in between: composable yet concise and clear.
-//      In the meantime, having one big function is easier to comprehend and organize.
-function iterateNode(n) {
-    n.age += 1;
-
-    // Extend tip
-    if (n.isTip) {
-      n.isTip = false;
-
-      var newNode = Node({
-        index: n.index + 1,
-        depth: n.depth,
-        direction: n.direction.clone(),
-      });
-
-      // Trend upwards
-      if (newNode.depth < 2) {
-        newNode.direction.y += 0.05;
-      }
-
-      // Generate leaves
-      var numberOfLeaves = 5;
-      var leafDistance = 2;
-      for (var i = 0; i < numberOfLeaves; i++) {
-        newNode.leaves.push(randomVector().setLength(leafDistance));
-      }
-
-      // Jitter direction
-      if (newNode.index > 2) {
-        jitterDirection(newNode.direction, 0.05, 0.2, 0.05);
-      }
-
-      // Jitter shape
-      jitterShape(newNode.shape);
-
-      // Link new node
-      n.next = newNode;
-      newNode.previous = n;
-    }
-
-    // Diminish the leaves with age
-    if (n.leaves.length > 0) {
-      if (n.age > 7) {
-        n.leaves.length = 0;
-      } else if (n.age > 3) {
-        n.leaves.length -= Math.floor(Math.random() * 0.3 * n.leaves.length);
-      }
-    }
-
-    // Scale shape
-    if (n.age > 10) {
-      n.scale += 2;
-    } else {
-      n.scale += 1;
-    }
-
-    // Increment length
-    if (n.depth == 0) {
-      n.length += 0.05;
-    } else if (n.depth == 1) {
-      n.length += 0.02;
-    } else {
-      n.length += 0.001;
-    }
-
-    // Attempt to create a branch
-    var maxBranchDepth = 10;
-    var minBranchIndex = 2;
-    var minBranchAge = 1;
-    var maxBranchAge = 5;
-    var branchChance = 0.1;
-
-    if (n.branches.length == 0
-      && n.depth < maxBranchDepth
-      && n.index > minBranchIndex
-      && n.age > minBranchAge
-      && n.age < maxBranchAge
-      && Math.random() < branchChance
-    ) {
-      var direction = perpendicularToBranchDirection(n);
-      direction.y += 0.1;
-
-      // Jitter direction
-      // var maxAngle = 1 / 5;
-      // jitterDirection(direction, maxAngle, maxAngle, maxAngle);
-
-      // Rotate around the trunk
-      direction.applyAxisAngle(n.direction, randomAngle());
-
-      var newNode = Node({
-        direction: direction,
-        depth: n.depth + 1,
-      });
-
-      n.branches.push(newNode);
-    }
-
-    // Iterate the node's branches
-    for (var j = 0; j < n.branches.length; j++) {
-      iterateBranch(n.branches[j], iterateNode);
-    }
+    rand.nextFloat() * 2 - 1,
+    rand.nextFloat() * 2 - 1,
+    rand.nextFloat() * 2 - 1);
 }
 
 function randomAngle() {
-  return Math.random() * Math.PI * 2;
+  return rand.nextFloat() * Math.PI * 2;
 }
 
 function jitterDirection(direction, x, y, z) {
     var xRange = Math.PI * 2 * x;
     var yRange = Math.PI * 2 * y;
     var zRange = Math.PI * 2 * z;
-    direction.applyAxisAngle(common.X_AXIS, Math.random() * xRange - xRange / 2);
-    direction.applyAxisAngle(common.Y_AXIS, Math.random() * yRange - yRange / 2);
-    direction.applyAxisAngle(common.Z_AXIS, Math.random() * zRange - zRange / 2);
+    direction.applyAxisAngle(common.X_AXIS, rand.nextFloat() * xRange - xRange / 2);
+    direction.applyAxisAngle(common.Y_AXIS, rand.nextFloat() * yRange - yRange / 2);
+    direction.applyAxisAngle(common.Z_AXIS, rand.nextFloat() * zRange - zRange / 2);
 }
 
-function jitterShape(shape) {
-  for (var i = 0; i < shape.length; i++) {
-    shape[i].multiplyScalar(Math.random() + 0.8);
+function jitterShape(shape, amt) {
+  // TODO would be interesting to explore a method for jitter that is not
+  //      per-point, such as superimposing jitter path over the shape,
+  //      so that jitter is applied more smoothly.
+  // TODO add ability to twist
+
+  // TODO currently skipping first and last points to avoid breaking of seam
+  for (var i = 1; i < shape.length - 1; i++) {
+    shape[i].multiplyScalar(1 + (rand.nextFloat() * amt));
   }
 }
 
-// TODO need a way to organize all the various parameters available
-function Node(initial) {
-  return Object.assign({
-    index: 0,
-    depth: 0,
-    isTip: true,
-    age: 1,
-    length: 0.5,
-    scale: 1,
-    direction: common.UP.clone(),
-    branches: [],
-    leaves: [],
-    branchRotation: 0,
-    shape: circle(0.01),
-    next: null,
-    previous: null
-  }, initial);
-}
 
-
-// Modifies a shape's vertices to be positions and oriented to the node's position and direction.
-function getShape(node) {
+// Modifies a shape's vertices to be positions,
+// transformed to the node's position, direction, and scale.
+function orientNodeShape(node) {
   var vertices = [];
   var q = new THREE.Quaternion();
   q.setFromUnitVectors(common.Y_AXIS, node.direction);
@@ -265,10 +384,12 @@ function getShape(node) {
 }
 
 
+// Converts a tree of Nodes to a THREE.js geometry for rendering.
+function buildTreeGeometry(branch, opts, startPosition) {
+  if (startPosition == undefined) {
+    startPosition = new Vec(0, 0, 0);
+  }
 
-function systemToGeometry(startNode, startPosition) {
-
-  var shapeDivisions = 5;
   var branches = new THREE.Geometry();
   var leaves = new THREE.Geometry();
   var nextPosition = startPosition.clone();
@@ -276,36 +397,53 @@ function systemToGeometry(startNode, startPosition) {
   // Each shape has "shapeDivisions" points.
   var paths = [];
 
-  for (var i = 0; i < shapeDivisions + 1; i++) {
+  for (var i = 0; i < opts.shapeDivisions + 1; i++) {
     paths.push(new THREE.CatmullRomCurve3());
   }
 
-  iterateBranch(startNode, function(node) {;
-    var shape = getShape(node).getPoints(shapeDivisions);
+  for (var z = 0; z < branch.length; z++) {
+    var node = branch[z];
+    var prevPosition = nextPosition.clone();
+    var shape = orientNodeShape(node).getPoints(opts.shapeDivisions);
 
+    // copy the node shape into the list of paths.
     for (var i = 0; i < shape.length; i++) {
       var vertex = shape[i].clone().add(nextPosition);
       paths[i].points.push(vertex);
     }
 
+    // increment the position based on the node's length.
     nextPosition.add(node.direction.clone().setLength(node.length));
 
-    for (var i = 0; i < node.leaves.length; i++) {
-      var vertex = node.leaves[i].clone().add(nextPosition);
-      leaves.vertices.push(vertex);
+    /*
+    if (opts.drawLeaves) {
+      // create leaf vertices based on node's current position.
+      for (var i = 0; i < node.leaves.length; i++) {
+        var leaf = node.leaves[i];
+        // Transform the leaf vertex to be relative to the node's current position.
+        var vertex = leaf.vertex.clone().add(nextPosition);
+        leaves.vertices.push(vertex);
+        //leaves.colors.push(leaf.color);
+      }
     }
+    */
 
     // Build node's branches geometries
     for (var j = 0; j < node.branches.length; j++) {
-      var branchGeometries = systemToGeometry(node.branches[j], nextPosition);
+      var branchGeometries = buildTreeGeometry(node.branches[j], opts, prevPosition);
       branches.merge(branchGeometries.branches);
-      leaves.merge(branchGeometries.leaves);
+      //leaves.merge(branchGeometries.leaves);
     }
-  });
+  }
 
-  var trunkGeometry = extrude(10, paths);
-
+  var trunkGeometry = extrude(5, paths);
   branches.merge(trunkGeometry);
+
+  branches.computeBoundingBox();
+  // Face normals are needed when rendering Lambert/Phong or other materials affected by light
+  branches.computeFaceNormals();
+  // Vertex normals are used to render a smoothed mesh
+  branches.computeVertexNormals();
 
   return {
     branches: branches,
@@ -313,61 +451,68 @@ function systemToGeometry(startNode, startPosition) {
   };
 }
 
+function trunkToGeometry(geometries, opts) {
 
-var trunk = Node();
+  var group = new THREE.Group();
 
-// TODO an interesting idea is to have a fixed amount of energy which can be distributed
-//      throughout the system on each iteration. This might have the effect of modulating
-//      trunk/branch growth as the tree gets bigger.
 
-for (var i = 0; i < 35; i++) {
-  iterateBranch(trunk, iterateNode);
+  if (opts.drawLeaves) {
+    var leavesMaterial = new THREE.PointsMaterial({
+      size: 0.5,
+      color: opts.leafColor,
+      //vertexColors: THREE.VertexColors,
+    });
+    var leaves = new THREE.Points(geometries.leaves, leavesMaterial);
+    group.add(leaves);
+  }
+
+  if (opts.wireframe) {
+    var wireframeMaterial = new THREE.MeshBasicMaterial({
+      color: opts.wireframeColor,
+    });
+    wireframeMaterial.wireframe = true;
+    var wireframe = new THREE.Mesh(geometries.branches, wireframeMaterial);
+    group.add(wireframe);
+  }
+
+    var material = new THREE.MeshLambertMaterial({
+      color: opts.color,
+      //vertexColors: THREE.VertexColors,
+    });
+    var tree = new THREE.Mesh(geometries.branches, material);
+    group.add(tree);
+
+  return group;
 }
 
-var startPosition = new Vec(0, 0, 0);
-var geometries = systemToGeometry(trunk, startPosition);
-
-console.log("Branches vertex count", geometries.branches.vertices.length);
-console.log("Leaves vertex count", geometries.leaves.vertices.length);
-
-geometries.branches.computeBoundingBox();
-// Face normals are needed when rendering Lambert/Phong or other materials affected by light
-geometries.branches.computeFaceNormals();
-// Vertex normals are used to render a smoothed mesh
-geometries.branches.computeVertexNormals();
-
-
-var material = new THREE.MeshLambertMaterial({ color: 0x444444 });
-var tree = new THREE.Mesh( geometries.branches, material );
-
-// TODO move leaf color into the model
-var leavesMaterial = new THREE.PointsMaterial({
-  color: 0xff0000,
-  size: 0.5,
-  vertexColors: THREE.VertexColors,
-});
-
-// TODO things like leaf color and variation belong in the model
-// Add some color variation
-var colors = [];
-for (var i = 0; i < geometries.leaves.vertices.length; i++) {
-  colors[i] = new THREE.Color();
-  colors[i].setHSL(0, Math.random(), Math.random() + 0.2);
+// End  module
 }
-geometries.leaves.colors = colors;
-var leaves = new THREE.Points(geometries.leaves, leavesMaterial);
 
 
-var wireframeMaterial = new THREE.MeshBasicMaterial({
-  color: 0x00ff00
-});
-wireframeMaterial.wireframe = true;
-var wireframe = new THREE.Mesh(geometries.branches, wireframeMaterial);
 
-var group = new THREE.Group();
-group.add(tree);
-group.add(leaves);
-// group.add(wireframe);
-
-return group;
+/**
+ * Creates a pseudo-random value generator. The seed must be an integer.
+ *
+ * Uses an optimized version of the Park-Miller PRNG.
+ * http://www.firstpr.com.au/dsp/rand31/
+ */
+function Random(seed) {
+  this._seed = seed % 2147483647;
+  if (this._seed <= 0) this._seed += 2147483646;
 }
+
+/**
+ * Returns a pseudo-random value between 1 and 2^32 - 2.
+ */
+Random.prototype.next = function () {
+  return this._seed = this._seed * 16807 % 2147483647;
+};
+
+
+/**
+ * Returns a pseudo-random floating point number in range [0, 1).
+ */
+Random.prototype.nextFloat = function (opt_minOrMax, opt_max) {
+  // We know that result of next() will be 1 to 2147483646 (inclusive).
+  return (this.next() - 1) / 2147483646;
+};

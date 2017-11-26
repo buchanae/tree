@@ -1,4 +1,4 @@
-var THREE = require('three');
+//var THREE = require('three');
 
 // Camera object focus/look at controls
 // consider
@@ -38,13 +38,13 @@ var CameraFitUtils = {
   }
 };
 
-module.exports = function Showcase(tree, container) {
+module.exports = function Showcase(tree, opts, container) {
   var scene = new THREE.Scene();
   scene.add(tree);
 
   var viewerHeight, viewerWidth, aspectRatio;
   var renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setClearColor(0xffffff);
+  renderer.setClearColor(0xdddddd);
   container.appendChild( renderer.domElement );
 
   function updateSize() {
@@ -78,26 +78,34 @@ module.exports = function Showcase(tree, container) {
   window.addEventListener('resize', updateSize);
 
   scene.add( new THREE.AmbientLight( 0x666666 ) );
-  var directionalLight = new THREE.DirectionalLight( 0xffffff, 0.8 );
-  directionalLight.position.set( 3, 10, 1 ).normalize();
+  var directionalLight = new THREE.DirectionalLight( 0xffffff, 3.8 );
+  directionalLight.position.set( 3, 10, 0 ).normalize();
   scene.add( directionalLight );
 
 
   setInterval(function() {
-    tree.rotation.y += 0.05;
+    if (opts.rotate) {
+      tree.rotation.y += 0.05;
+    }
   }, 50);
 
+  function fit() {
+    // TODO doesn't work for growing
+     var bbox = new THREE.Box3();
+     bbox.setFromObject(tree);
+     var position = CameraFitUtils.solvePosition(camera, bbox);
+      camera.position.copy(position);
+  }
 
   function render() {
     requestAnimationFrame(render);
-
-    // TODO doesn't work for growing
-    // var bbox = new THREE.Box3();
-    // bbox.setFromObject(tree);
-    // var position = CameraFitUtils.solvePosition(camera, bbox);
-    // camera.position.copy(position);
-
-    renderer.render(scene, camera);
+    if (opts.render) {
+      renderer.render(scene, camera);
+    }
   }
   render();
+
+  return {
+    fit: fit,
+  }
 }
