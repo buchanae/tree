@@ -81,6 +81,11 @@ function Showcase(tree, opts, container) {
   scene.add( directionalLight );
 
 
+  setInterval(function() {
+    if (opts.rotate) {
+      tree.rotation.y += 0.05;
+    }
+  }, 50);
 
   function fit() {
     // TODO doesn't work for growing
@@ -96,12 +101,6 @@ function Showcase(tree, opts, container) {
       render();
     }
   }
-  setInterval(function() {
-    if (opts.play) {
-      tree.rotation.y += 0.05;
-    }
-  }, 50);
-
   function render() {
     renderer.render(scene, camera);
   }

@@ -7,22 +7,6 @@ have a fixed amount of energy which can be distributed
 throughout the system on each iteration. This might have the effect of modulating
 trunk/branch growth as the tree gets bigger.
 
-ability to trend branch downward, so it curves over length
-
-ability to branch only from the sides, or at least have them trend towards the sides
-  for second level branches, to mimic evergreen trees
-
-ability for a node to have a randomly placed cluster of shapes (box, sphere, etc)
-  instead of just a single one
-
-ability for node to control vertex/material colors
-
-"upness", but in world position
-
-GUI:
-- control x/y/z with one slider, or optionally each individually
-- color range, or color choices
-
 ****************************************************************************/
 
 var saveEl = document.getElementById("saved");
@@ -35,51 +19,42 @@ function Version10() {
     msg: "",
   };
 
-  function levelOpts(name) {
-    var opts = {
-      name: name,
-      jitterShape: 0,
-      jitterDirection: 0.01,
-      jitterFreq: 0.1,
-      thickness: 1,
+  var levelOpts = {
+    jitterShape: 0,
+    jitterDirection: 0.01,
+    jitterFreq: 0.1,
+    thickness: 1,
+    decay: 0.01,
+    spacing: 5,
+    upness: 0.01,
 
-      // TODO decay x/z vs y, so that branch gets thinner but not shorter
-      decay: 0.01,
-      spacing: 5,
-      upness: 0.0,
+    leafDistance: 5,
+    numberOfLeaves: 5,
 
-      leafDistance: 5,
-      numberOfLeaves: 5,
-
-      minJitterIndex: 3,
-      maxBranchDepth: 2,
-      minBranchIndex: 10,
-      minBranchAge: 1,
-      maxBranchAge: 100,
-      branchChance: 0,
-      color: "#3d523c",
-    };
-    opts.material = new THREE.MeshLambertMaterial({
-      color: opts.color,
-      //skinning: true,
-    })
-    return opts;
-  }
+    minJitterIndex: 3,
+    maxBranchDepth: 2,
+    minBranchIndex: 10,
+    minBranchAge: 1,
+    maxBranchAge: 100,
+    branchChance: 0.1,
+  };
 
   var opts = {
-    years: 45,
+    years: 25,
     seed: Math.floor(Math.random() * 1000),
-    //shapeDivisions: 10,
-    //initialRadius: 10,
-    play: false,
-    //wireframe: false,
-    //leafColor: "#00ff00",
-    //wireframeColor: "#00ff00",
+    shapeDivisions: 10,
+    initialRadius: 10,
+    render: true,
+    rotate: false, //true,
+    wireframe: false,
+    color: "#874242",
+    leafColor: "#00ff00",
+    wireframeColor: "#00ff00",
     levels: [
-      levelOpts("Trunk"),
-      levelOpts("First"),
-      levelOpts("Second"),
-      levelOpts("Third"),
+      Object.assign({}, levelOpts),
+      Object.assign({}, levelOpts),
+      Object.assign({}, levelOpts),
+      Object.assign({}, levelOpts),
     ],
     drawLeaves: false,
   }
@@ -89,19 +64,20 @@ function Version10() {
   }
 
   var gui = new dat.GUI();
+  var bmaterial = new THREE.MeshLambertMaterial({
+    color: opts.color,
+    skinning: true,
+  });
+  var cmaterial = new THREE.MeshLambertMaterial({
+    color: "green",
+    skinning: true,
+  });
   var root = new THREE.Group();
 
-  var bx = new THREE.CylinderGeometry(
-    10,                       // radiusTop
-    10,                       // radiusBottom
-    10,           // height
-    5,
-    3,
-    false                     // openEnded
-  );
-  //var bx = new THREE.SphereGeometry(10, 10, 10);
-  //var bx = new THREE.BoxGeometry(30, 30, 30, 1, 1, 1);
-
+  var bx = new THREE.BoxGeometry(10, 10, 10, 1, 1, 1);
+  var box = new THREE.BoxGeometry(2, 2, 2, 1, 1, 1);
+  var boxMesh = new THREE.Mesh( box, cmaterial );
+  root.add(boxMesh);
   var treeGroup = new THREE.Group();
   root.add(treeGroup);
 
@@ -112,7 +88,7 @@ function Version10() {
       rand = new Random(opts.seed);
       // Everything starts here.
       // The result and return value is a THREE.js geometry, which is rendered by the calling code.
-      var trunk = [Node(0, opts.levels[0])];
+      var trunk = [Node()];
 
       // Grow tree.
       // Time is measured in "years".
@@ -121,9 +97,14 @@ function Version10() {
       }
       treeGroup.remove.apply(treeGroup, treeGroup.children);
 
+      /*
+      visitNodes(trunk, function(n) {
+        n.bone.add(m)
+      });
+      */
+
       treeGroup.add(trunk[0].bone);
       showcase.fit();
-      showcase.render();
 
       saveEl.value = btoa(JSON.stringify(opts));
     },
@@ -133,43 +114,41 @@ function Version10() {
   gui.add(ctrl, "refresh");
   gui.add(showcase, "fit");
   gui.add(info, "msg").listen();
-  gui.add(opts, "play").onChange(function() {
-    showcase.play();
-  });
-  gui.add(root.rotation, "y", 0, Math.PI * 2).onChange(function() {
-    showcase.render();
-  });
+  gui.add(opts, "rotate");
+  gui.add(opts, "render");
+  gui.add(root.rotation, "y", 0, Math.PI * 2);
 
   var ctrlGui = gui.addFolder("Control")
   ctrlGui.add(opts, "years", 1, 100).onChange(ctrl.refresh);
   ctrlGui.add(opts, "seed", 0, 1000).onFinishChange(ctrl.refresh);
-  //ctrlGui.add(opts, "shapeDivisions", 3, 20).step(1).onChange(ctrl.refresh);
+  ctrlGui.add(opts, "shapeDivisions", 3, 20).step(1).onChange(ctrl.refresh);
+  ctrlGui.addColor(opts, "leafColor").onChange(ctrl.refresh);
+  ctrlGui.addColor(opts, "color").onChange(function() {
+    bmaterial.color.setStyle(opts.color);
+  });
   ctrlGui.add(opts, "drawLeaves").onChange(ctrl.refresh);
 
+  var levelNames = ["Trunk", "First", "Second", "Third"]
   for (var i = 0; i < opts.levels.length; i++) {
-    (function(o) {
-      var g = gui.addFolder(o.name)
+    var name = levelNames[i];
+    var o = opts.levels[i];
+    var g = gui.addFolder(name)
 
-      g.add(o, "thickness", 0, 2).step(0.01).onChange(ctrl.refresh);
-      g.add(o, "decay", 0, 0.5).step(0.001).onChange(ctrl.refresh);
-      g.add(o, "spacing", 0, 50).step(1).onChange(ctrl.refresh);
-      g.add(o, "upness", -Math.PI / 2, Math.PI / 2).step(0.01).onChange(ctrl.refresh);
-      g.add(o, "jitterShape", 0, 2).step(0.03).onChange(ctrl.refresh);
-      g.add(o, "jitterFreq", 0, 1).step(0.01).onChange(ctrl.refresh);
-      g.add(o, "jitterDirection", 0, 0.5).step(0.01).onChange(ctrl.refresh);
-      g.add(o, "minJitterIndex", 0, 50).step(1).onChange(ctrl.refresh);
-      g.add(o, "maxBranchDepth", 1, 20).step(1).onChange(ctrl.refresh);
-      g.add(o, "minBranchIndex", 1, 20).step(1).onChange(ctrl.refresh);
-      g.add(o, "maxBranchAge", 1, 20).step(1).onChange(ctrl.refresh);
-      g.add(o, "minBranchAge", 1, 50).step(1).onChange(ctrl.refresh);
-      g.add(o, "branchChance", 0, 1).step(0.01).onChange(ctrl.refresh);
-      g.add(o, "leafDistance", 1, 20).onChange(ctrl.refresh);
-      g.add(o, "numberOfLeaves", 0, 20).onChange(ctrl.refresh);
-      g.addColor(o, "color").onChange(function(c) {
-        o.material.color.setStyle(c);
-        showcase.render();
-      });
-    })(opts.levels[i]);
+    g.add(o, "thickness", 0, 2).step(0.01).onChange(ctrl.refresh);
+    g.add(o, "decay", 0, 0.1).step(0.001).onChange(ctrl.refresh);
+    g.add(o, "spacing", 0, 25).step(1).onChange(ctrl.refresh);
+    g.add(o, "upness", -1, 1).step(0.01).onChange(ctrl.refresh);
+    g.add(o, "jitterShape", 0, 2).step(0.03).onChange(ctrl.refresh);
+    g.add(o, "jitterFreq", 0, 1).step(0.01).onChange(ctrl.refresh);
+    g.add(o, "jitterDirection", 0, 0.5).step(0.01).onChange(ctrl.refresh);
+    g.add(o, "minJitterIndex", 0, 50).step(1).onChange(ctrl.refresh);
+    g.add(o, "maxBranchDepth", 1, 20).step(1).onChange(ctrl.refresh);
+    g.add(o, "minBranchIndex", 1, 20).step(1).onChange(ctrl.refresh);
+    g.add(o, "maxBranchAge", 1, 20).step(1).onChange(ctrl.refresh);
+    g.add(o, "minBranchAge", 1, 50).step(1).onChange(ctrl.refresh);
+    g.add(o, "branchChance", 0, 1).onChange(ctrl.refresh);
+    g.add(o, "leafDistance", 1, 20).onChange(ctrl.refresh);
+    g.add(o, "numberOfLeaves", 0, 20).onChange(ctrl.refresh);
   }
 
   ctrl.refresh();
@@ -178,17 +157,18 @@ function Version10() {
 
 
 
-function Node(depth, opts) {
-  return {
+function Node(initial) {
+  return Object.assign({
     index: 0,
-    depth: depth,
+    depth: 0,
     age: 1,
     // Each node may have a list of branches starting at this node.
     branches: [],
     // Each node may have a list of leaves attached to this node.
     leaves: [],
-    bone: new THREE.Mesh(bx, opts.material),
-  };
+    //bone: new THREE.Bone(),
+    bone: new THREE.Mesh(bx, bmaterial),
+  }, initial);
 }
 
 
@@ -198,8 +178,10 @@ function GrowBranch(branch, year, opts) {
   var tipIndex = branch.length - 1;
   var tip = branch[tipIndex];
   var lopts = opts.levels[tip.depth];
-  var newNode = Node(tip.depth, lopts);
-  newNode.index = branch.length;
+  var newNode = Node({
+    index: branch.length,
+    depth: tip.depth,
+  });
   newNode.bone.position.y = lopts.spacing;
   tip.bone.add(newNode.bone);
   newNode.bone.scale.set(1.0 - lopts.decay, 1.0 - lopts.decay, 1.0 - lopts.decay);
@@ -288,12 +270,13 @@ function GrowNode(n, year, opts) {
     // Rotate around the trunk
     //direction.applyAxisAngle(n.direction, randomAngle());
 
-    var newNode = Node(n.depth + 1, bopts);
+    var newNode = Node({
+      depth: n.depth + 1,
+    });
     n.bone.add(newNode.bone);
-    newNode.bone.scale.set(bopts.thickness, bopts.thickness, bopts.thickness);
     //newNode.bone.rotation.x = 0.5;//randomBetween(-0.5, 0.5);
     newNode.bone.rotation.y = randomBetween(0, Math.PI * 2)//Math.PI;//opts.rotation;//year;//randomBetween(-15, 15);
-    newNode.bone.rotation.z = (Math.PI / 2) + randomBetween(lopts.upness - 0.2, lopts.upness + 0.2);
+    newNode.bone.rotation.z = randomBetween(0.5, 1.5);
     //newNode.bone.scale.z = 30;
 
     n.branches.push([newNode]);
