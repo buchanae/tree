@@ -96,6 +96,11 @@ function Showcase(tree, opts, container) {
       render();
     }
   }
+  setInterval(function() {
+    if (opts.play) {
+      tree.rotation.y += 0.05;
+    }
+  }, 50);
 
   function render() {
     renderer.render(scene, camera);

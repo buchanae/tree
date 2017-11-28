@@ -15,7 +15,7 @@ ability for a node to have a randomly placed cluster of shapes (box, sphere, etc
 
 per-node control over vertex/material colors
 
-"upness", but in world coordinates
+"upness", but in world position
 
 more advanced trend, e.g. non-linear
 
@@ -43,48 +43,9 @@ var container = document.getElementById("container");
 function Version10() {
   console.log("Tree version 10");
 
-
-  function trunkOpts(gui) {
+  function levelOpts(name) {
     var opts = {
-      thickness: 1,
-      // TODO decay x/z vs y, so that branch gets thinner but not shorter
-      decay: 0.01,
-      spacing: 5,
-      trend: 0.0,
-      jitterShape: 0,
-      jitterDirection: 0.01,
-      jitterFreq: 0.1,
-      minJitterIndex: 3,
-      color: "#3d523c",
-      geometry: "box",
-    };
-    opts.material = new THREE.MeshLambertMaterial({
-      color: opts.color,
-    })
-
-    gui.add(opts, "thickness", 0, 2).step(0.01).onChange(ctrl.refresh);
-    gui.add(opts, "decay", 0, 0.5).step(0.001).onChange(ctrl.refresh);
-    gui.add(opts, "spacing", 0, 50).step(1).onChange(ctrl.refresh);
-    gui.add(opts, "trend", -0.1, 0.1).step(0.01).onChange(ctrl.refresh);
-    gui.add(opts, "jitterShape", 0, 2).step(0.03).onChange(ctrl.refresh);
-    gui.add(opts, "jitterFreq", 0, 1).step(0.01).onChange(ctrl.refresh);
-    gui.add(opts, "jitterDirection", 0, 0.5).step(0.01).onChange(ctrl.refresh);
-    gui.add(opts, "minJitterIndex", 0, 50).step(1).onChange(ctrl.refresh);
-    gui.addColor(opts, "color").onChange(function(c) {
-      opts.material.color.setStyle(c);
-      ctrl.refresh();
-    });
-    gui.add(opts, "geometry", {
-      "Box": "box",
-      "Cylinder": "cylinder",
-      "Sphere": "sphere",
-    }).onChange(ctrl.refresh);
-
-    return opts;
-  }
-
-  function levelOpts(gui) {
-    var opts = {
+      name: name,
       jitterShape: 0,
       jitterDirection: 0.01,
       jitterFreq: 0.1,
@@ -112,34 +73,32 @@ function Version10() {
       color: opts.color,
       //skinning: true,
     })
-    gui.add(opts, "thickness", 0, 2).step(0.01).onChange(ctrl.refresh);
-    gui.add(opts, "decay", 0, 0.5).step(0.001).onChange(ctrl.refresh);
-    gui.add(opts, "spacing", 0, 50).step(1).onChange(ctrl.refresh);
-    gui.add(opts, "upness", -Math.PI / 2, Math.PI / 2).step(0.01).onChange(ctrl.refresh);
-    gui.add(opts, "trend", -0.1, 0.1).step(0.01).onChange(ctrl.refresh);
-    gui.add(opts, "jitterShape", 0, 2).step(0.03).onChange(ctrl.refresh);
-    gui.add(opts, "jitterFreq", 0, 1).step(0.01).onChange(ctrl.refresh);
-    gui.add(opts, "jitterDirection", 0, 0.5).step(0.01).onChange(ctrl.refresh);
-    gui.add(opts, "minJitterIndex", 0, 50).step(1).onChange(ctrl.refresh);
-    gui.add(opts, "maxBranchDepth", 1, 20).step(1).onChange(ctrl.refresh);
-    gui.add(opts, "minBranchIndex", 1, 200).step(1).onChange(ctrl.refresh);
-    gui.add(opts, "maxBranchAge", 1, 20).step(1).onChange(ctrl.refresh);
-    gui.add(opts, "minBranchAge", 1, 50).step(1).onChange(ctrl.refresh);
-    gui.add(opts, "branchChance", 0, 1).step(0.01).onChange(ctrl.refresh);
-    gui.add(opts, "leafDistance", 1, 20).onChange(ctrl.refresh);
-    gui.add(opts, "numberOfLeaves", 0, 20).onChange(ctrl.refresh);
-    gui.addColor(opts, "color").onChange(function(c) {
-      opts.material.color.setStyle(c);
-      ctrl.refresh();
-    });
-    gui.add(opts, "geometry", {
-      "Box": "box",
-      "Cylinder": "cylinder",
-      "Sphere": "sphere",
-    }).onChange(ctrl.refresh);
     return opts;
   }
 
+  var opts = {
+    years: 45,
+    seed: Math.floor(Math.random() * 1000),
+    //shapeDivisions: 10,
+    //initialRadius: 10,
+    play: false,
+    //wireframe: false,
+    //leafColor: "#00ff00",
+    //wireframeColor: "#00ff00",
+    levels: [
+      levelOpts("Trunk"),
+      levelOpts("First"),
+      levelOpts("Second"),
+      levelOpts("Third"),
+    ],
+    drawLeaves: false,
+  }
+
+  if (saveEl.value != "") {
+    opts = JSON.parse(atob(saveEl.value));
+  }
+
+  var gui = new dat.GUI();
   var root = new THREE.Group();
 
   var geometries = {
@@ -158,6 +117,7 @@ function Version10() {
     }
   }, 50);
 
+  var rand = new Random(opts.seed);
 
   var ctrl = {
     refresh: function() {
@@ -174,47 +134,61 @@ function Version10() {
       treeGroup.remove.apply(treeGroup, treeGroup.children);
 
       treeGroup.add(trunk[0].bone);
-      showcase.render();
       showcase.fit();
+      showcase.render();
 
       saveEl.value = btoa(JSON.stringify(opts));
     },
   };
 
-
-  var opts = {
-    years: 45,
-    seed: Math.floor(Math.random() * 1000),
-    play: false,
-    wireframe: false,
-    levels: [],
-  }
-
-  if (saveEl.value != "") {
-    opts = JSON.parse(atob(saveEl.value));
-  }
-
-  var rand = new Random(opts.seed);
   var showcase = Showcase(root, opts, container);
-  var gui = new dat.GUI();
-
+  gui.add(ctrl, "refresh");
   gui.add(opts, "play").onChange(function() {
     showcase.play();
   });
-  gui.add(treeGroup.rotation, "y", 0, Math.PI * 2).onChange(function() {
+  gui.add(root.rotation, "y", 0, Math.PI * 2).onChange(function() {
     showcase.render();
   });
-  gui.add(opts, "years", 1, 100).onChange(ctrl.refresh);
-  gui.add(opts, "seed", 0, 1000).onFinishChange(ctrl.refresh);
 
-  opts.levels = [
-    trunkOpts(gui.addFolder("Trunk")),
-    levelOpts(gui.addFolder("First")),
-    levelOpts(gui.addFolder("Second")),
-    levelOpts(gui.addFolder("Third")),
-  ];
+  var ctrlGui = gui.addFolder("Control")
+  ctrlGui.add(opts, "years", 1, 100).onChange(ctrl.refresh);
+  ctrlGui.add(opts, "seed", 0, 1000).onFinishChange(ctrl.refresh);
+  ctrlGui.add(opts, "drawLeaves").onChange(ctrl.refresh);
+
+  for (var i = 0; i < opts.levels.length; i++) {
+    (function(o) {
+      var g = gui.addFolder(o.name)
+
+      g.add(o, "thickness", 0, 2).step(0.01).onChange(ctrl.refresh);
+      g.add(o, "decay", 0, 0.5).step(0.001).onChange(ctrl.refresh);
+      g.add(o, "spacing", 0, 50).step(1).onChange(ctrl.refresh);
+      g.add(o, "upness", -Math.PI / 2, Math.PI / 2).step(0.01).onChange(ctrl.refresh);
+      g.add(o, "trend", -0.1, 0.1).step(0.01).onChange(ctrl.refresh);
+      g.add(o, "jitterShape", 0, 2).step(0.03).onChange(ctrl.refresh);
+      g.add(o, "jitterFreq", 0, 1).step(0.01).onChange(ctrl.refresh);
+      g.add(o, "jitterDirection", 0, 0.5).step(0.01).onChange(ctrl.refresh);
+      g.add(o, "minJitterIndex", 0, 50).step(1).onChange(ctrl.refresh);
+      g.add(o, "maxBranchDepth", 1, 20).step(1).onChange(ctrl.refresh);
+      g.add(o, "minBranchIndex", 1, 200).step(1).onChange(ctrl.refresh);
+      g.add(o, "maxBranchAge", 1, 20).step(1).onChange(ctrl.refresh);
+      g.add(o, "minBranchAge", 1, 50).step(1).onChange(ctrl.refresh);
+      g.add(o, "branchChance", 0, 1).step(0.01).onChange(ctrl.refresh);
+      g.add(o, "leafDistance", 1, 20).onChange(ctrl.refresh);
+      g.add(o, "numberOfLeaves", 0, 20).onChange(ctrl.refresh);
+      g.addColor(o, "color").onChange(function(c) {
+        o.material.color.setStyle(c);
+        showcase.render();
+      });
+      g.add(o, "geometry", {
+        "Box": "box",
+        "Cylinder": "cylinder",
+        "Sphere": "sphere",
+      }).onChange(ctrl.refresh);
+    })(opts.levels[i]);
+  }
 
   ctrl.refresh();
+  showcase.fit();
 
 
 
@@ -286,6 +260,7 @@ function GrowBranch(branch, year, opts) {
 }
 
 function GrowNode(n, year, opts) {
+  var lopts = opts.levels[n.depth];
   n.age += 1;
 
 /*
@@ -299,6 +274,7 @@ function GrowNode(n, year, opts) {
   }
 
 */
+
 
   var bopts = opts.levels[n.depth + 1];
   if (
