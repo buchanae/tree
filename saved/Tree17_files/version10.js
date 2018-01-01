@@ -41,10 +41,12 @@ var saveEl = document.getElementById("saved");
 var container = document.getElementById("container");
 
 function Version10() {
+  console.log("Tree version 10");
+
 
   function trunkOpts(gui) {
     var opts = {
-      thickness: 1,
+      thickness: 0.05,
       growth: 0.01,
       spacing: 5,
       trend: 0.0,
@@ -52,22 +54,35 @@ function Version10() {
       jitterDirection: 0.01,
       jitterFreq: 0,
       minJitterIndex: 3,
+      material: "lambert",
+      color: "#3d523c",
       geometry: "box",
+      //geometry: "cylinder",
     };
 
-    gui.add(opts, "thickness", 0, 2).step(0.1).onChange(refresh);
-    gui.add(opts, "growth", 0, 1).step(0.001).onChange(refresh);
-    gui.add(opts, "spacing", 0, 50).step(1).onChange(refresh);
-    gui.add(opts, "trend", -0.1, 0.1).step(0.01).onChange(refresh);
-    gui.add(opts, "jitterShape", 0, 2).step(0.03).onChange(refresh);
-    gui.add(opts, "jitterFreq", 0, 1).step(0.01).onChange(refresh);
-    gui.add(opts, "jitterDirection", 0, 0.5).step(0.01).onChange(refresh);
-    gui.add(opts, "minJitterIndex", 0, 50).step(1).onChange(refresh);
+    gui.add(opts, "thickness", 0.01, 50.0).step(0.01).onChange(ctrl.refresh);
+    gui.add(opts, "growth", 0, 1).step(0.001).onChange(ctrl.refresh);
+    gui.add(opts, "spacing", 0, 50).step(1).onChange(ctrl.refresh);
+    gui.add(opts, "trend", -0.1, 0.1).step(0.01).onChange(ctrl.refresh);
+    gui.add(opts, "jitterShape", 0, 2).step(0.03).onChange(ctrl.refresh);
+    gui.add(opts, "jitterFreq", 0, 1).step(0.01).onChange(ctrl.refresh);
+    gui.add(opts, "jitterDirection", 0, 0.5).step(0.01).onChange(ctrl.refresh);
+    gui.add(opts, "minJitterIndex", 0, 50).step(1).onChange(ctrl.refresh);
+    gui.addColor(opts, "color").onChange(ctrl.refresh);
     gui.add(opts, "geometry", {
       "Box": "box",
       "Cylinder": "cylinder",
       "Sphere": "sphere",
-    }).onChange(refresh);
+    }).onChange(ctrl.refresh);
+    gui.add(opts, "material", {
+      "Basic": "basic",
+      "Phong": "phong",
+      "Lambert": "lambert",
+      "Standard": "standard",
+      "Toon": "toon",
+      "Physical": "physical",
+      "Depth": "depth",
+    }).onChange(ctrl.refresh);
 
     return opts;
   }
@@ -77,7 +92,7 @@ function Version10() {
       jitterShape: 0,
       jitterDirection: 0.01,
       jitterFreq: 0.1,
-      thickness: 1,
+      thickness: 0.05,
 
       growth: 0.01,
       spacing: 5,
@@ -94,63 +109,107 @@ function Version10() {
       maxBranchAge: 100,
       branchChance: 0,
       geometry: "box",
+      material: "lambert",
+      color: "#3d523c",
     };
-    gui.add(opts, "branchChance", 0, 0.7).step(0.01).onChange(refresh);
-    gui.add(opts, "thickness", 0, 2).step(0.01).onChange(refresh);
-    gui.add(opts, "growth", 0, 1).step(0.001).onChange(refresh);
-    gui.add(opts, "spacing", 0, 50).step(1).onChange(refresh);
-    gui.add(opts, "upness", -Math.PI / 2, Math.PI / 2).step(0.01).onChange(refresh);
-    gui.add(opts, "trend", -0.1, 0.1).step(0.01).onChange(refresh);
-    gui.add(opts, "jitterShape", 0, 2).step(0.03).onChange(refresh);
-    gui.add(opts, "jitterFreq", 0, 1).step(0.01).onChange(refresh);
-    gui.add(opts, "jitterDirection", 0, 0.5).step(0.01).onChange(refresh);
-    gui.add(opts, "minJitterIndex", 0, 50).step(1).onChange(refresh);
-    gui.add(opts, "maxBranchDepth", 1, 20).step(1).onChange(refresh);
-    gui.add(opts, "minBranchIndex", 1, 200).step(1).onChange(refresh);
-    gui.add(opts, "maxBranchAge", 1, 20).step(1).onChange(refresh);
-    gui.add(opts, "minBranchAge", 1, 50).step(1).onChange(refresh);
-    gui.add(opts, "leafDistance", 1, 20).onChange(refresh);
-    gui.add(opts, "numberOfLeaves", 0, 20).onChange(refresh);
+    gui.add(opts, "thickness", 0.01, 10).step(0.01).onChange(ctrl.refresh);
+    gui.add(opts, "growth", 0, 1).step(0.001).onChange(ctrl.refresh);
+    gui.add(opts, "spacing", 0, 50).step(1).onChange(ctrl.refresh);
+    gui.add(opts, "upness", -Math.PI / 2, Math.PI / 2).step(0.01).onChange(ctrl.refresh);
+    gui.add(opts, "trend", -0.1, 0.1).step(0.01).onChange(ctrl.refresh);
+    gui.add(opts, "jitterShape", 0, 2).step(0.03).onChange(ctrl.refresh);
+    gui.add(opts, "jitterFreq", 0, 1).step(0.01).onChange(ctrl.refresh);
+    gui.add(opts, "jitterDirection", 0, 0.5).step(0.01).onChange(ctrl.refresh);
+    gui.add(opts, "minJitterIndex", 0, 50).step(1).onChange(ctrl.refresh);
+    gui.add(opts, "maxBranchDepth", 1, 20).step(1).onChange(ctrl.refresh);
+    gui.add(opts, "minBranchIndex", 1, 200).step(1).onChange(ctrl.refresh);
+    gui.add(opts, "maxBranchAge", 1, 20).step(1).onChange(ctrl.refresh);
+    gui.add(opts, "minBranchAge", 1, 50).step(1).onChange(ctrl.refresh);
+    gui.add(opts, "branchChance", 0, 0.7).step(0.01).onChange(ctrl.refresh);
+    gui.add(opts, "leafDistance", 1, 20).onChange(ctrl.refresh);
+    gui.add(opts, "numberOfLeaves", 0, 20).onChange(ctrl.refresh);
+    gui.addColor(opts, "color").onChange(ctrl.refresh);
     gui.add(opts, "geometry", {
       "Box": "box",
       "Cylinder": "cylinder",
       "Sphere": "sphere",
-    }).onChange(refresh);
+    }).onChange(ctrl.refresh);
+    gui.add(opts, "material", {
+      "Basic": "basic",
+      "Phong": "phong",
+      "Lambert": "lambert",
+      "Standard": "standard",
+      "Toon": "toon",
+      "Physical": "physical",
+      "Depth": "depth",
+    }).onChange(ctrl.refresh);
     return opts;
   }
 
+  var root = new THREE.Group();
 
   var materials = {
-    basic: new THREE.MeshBasicMaterial(),
-    phong: new THREE.MeshPhongMaterial(),
-    lambert: new THREE.MeshLambertMaterial(),
-    standard: new THREE.MeshStandardMaterial(),
-    toon: new THREE.MeshToonMaterial(),
-    physical: new THREE.MeshPhysicalMaterial(),
-    depth: new THREE.MeshDepthMaterial(),
+    basic: THREE.MeshBasicMaterial,
+    phong: THREE.MeshPhongMaterial,
+    lambert: THREE.MeshLambertMaterial,
+    standard: THREE.MeshStandardMaterial,
+    toon: THREE.MeshToonMaterial,
+    physical: THREE.MeshPhysicalMaterial,
+    depth: THREE.MeshDepthMaterial,
   }
-  materials.lambert.color.setStyle("#6d451c");
-
   var geometries = {
-    cylinder: new THREE.CylinderGeometry(1, 1, 1, 15, 2, false),
-    sphere: new THREE.SphereGeometry(1, 1, 1),
-    box: new THREE.BoxGeometry(1,1,1,1,1,1),
+    cylinder: function(opts) {
+      return new THREE.CylinderGeometry(
+        opts.thickness, opts.thickness, 1, 15, 2, false);
+    },
+    sphere: function(opts) {
+      return new THREE.SphereGeometry(opts.thickness, opts.thickness, opts.thickness)
+    },
+    box: function(opts) {
+      return new THREE.BoxGeometry(
+        opts.thickness, 1, opts.thickness,
+        1, 1, 1
+      );
+    },
   }
 
   var treeGroup = new THREE.Group();
-  treeGroup.rotation.y = 2;
+  //treeGroup.position.x = -60;
+  root.add(treeGroup);
+
   setInterval(function() {
     if (opts.play) {
       treeGroup.rotation.y += 0.05;
     }
   }, 50);
 
-  var root = new THREE.Group();
-  root.add(treeGroup);
 
-  var ctrl = {}
+  var ctrl = {
+    refresh: function() {
+      rand = new Random(opts.seed);
+      // Everything starts here.
+      // The result and return value is a THREE.js geometry, which is rendered by the calling code.
+      var trunk = [Node(0, opts.levels[0])];
+      var trunkOpts = opts.levels[0];
+
+      // Grow tree.
+      // Time is measured in "years".
+      for (var year = 0; year < opts.years; year++) {
+        GrowBranch(trunk, year, opts)
+      }
+      treeGroup.remove.apply(treeGroup, treeGroup.children);
+
+      treeGroup.add(trunk[0].bone);
+      showcase.render();
+      showcase.fit();
+
+      saveEl.value = btoa(JSON.stringify(opts));
+    },
+  };
+
+
   var opts = {
-    years: 90,
+    years: 30,
     lightIntensity: 2.1,
     seed: Math.floor(Math.random() * 1000),
     play: false,
@@ -170,12 +229,13 @@ function Version10() {
     showcase.play();
   });
 
+  treeGroup.rotation.y = 2;
   gui.add(treeGroup.rotation, "y", 0, Math.PI * 2).onChange(function() {
     showcase.render();
   });
-  gui.add(opts, "lightIntensity", 0, 5).step(0.1).onChange(refresh);
-  gui.add(opts, "years", 1, 100).onChange(refresh);
-  gui.add(opts, "seed", 0, 1000).onFinishChange(refresh);
+  gui.add(opts, "lightIntensity", 0, 5).step(0.1).onChange(ctrl.refresh);
+  gui.add(opts, "years", 1, 100).onChange(ctrl.refresh);
+  gui.add(opts, "seed", 0, 1000).onFinishChange(ctrl.refresh);
 
   opts.levels = [
     trunkOpts(gui.addFolder("Trunk")),
@@ -183,72 +243,19 @@ function Version10() {
     levelOpts(gui.addFolder("Second")),
     levelOpts(gui.addFolder("Third")),
   ];
-  opts.levels[1].branchChance = 0.3;
+  opts.levels[1].branchChance = 0.06;
 
-  refresh();
+  ctrl.refresh();
 
-var nodeCount = 0;
 
-function refresh() {
-  console.time("refresh")
-  nodeCount = 0;
-  rand = new Random(opts.seed);
-
-  // Generation starts here.
-  var trunk = [Node(0, opts.levels[0])];
-
-  // Grow tree.
-  // Time is measured in "years".
-  console.timeStamp("grow")
-  console.time("grow")
-  for (var year = 0; year < opts.years; year++) {
-    console.time("year " + year)
-    GrowBranch(trunk, year, opts)
-    console.timeEnd("year " + year)
-  }
-  console.timeEnd("grow")
-
-  console.timeStamp("clear")
-  // Clear group
-  treeGroup.remove.apply(treeGroup, treeGroup.children);
-  // Add new tree mesh
-  treeGroup.add(trunk[0].bone);
-
-  console.timeStamp("render")
-  // Render
-  showcase.render();
-  showcase.fit();
-
-  console.timeStamp("save")
-  // Save settings
-  saveEl.value = btoa(JSON.stringify(opts));
-
-  console.log("node count", nodeCount);
-  console.log("faces", nodeCount * 6);
-  console.log("vertex", nodeCount * 6 * 6);
-
-  console.timeEnd("refresh")
-}
-window.refresh = refresh;
 
 
 function Node(depth, opts) {
-  nodeCount++;
-
-  var geo = geometries[opts["geometry"]].clone();
-  var mat = materials.lambert;
-  var m = new THREE.Mesh(geo, mat);
-  var mesh = new THREE.Group();
-  mesh.add(m);
-  var bone = new THREE.Object3D();
-  bone.add(mesh);
-
-  mesh.scale.set(opts.thickness, 1, opts.thickness);
-  mesh.rotation.y = randomBetween(-opts.jitterDirection, opts.jitterDirection);
-
-  // Currently hard-coded to match parameters given to geometry constructors.
-  bone.position.y = 1;//lopts.spacing;
-
+  var geo = geometries[opts.geometry](opts);
+  var mat = new materials[opts.material]({
+    color: opts.color,
+  });
+  var mesh = new THREE.Mesh(geo, mat);
   return {
     index: 0,
     depth: depth,
@@ -257,8 +264,8 @@ function Node(depth, opts) {
     branches: [],
     // Each node may have a list of leaves attached to this node.
     leaves: [],
-    bone: bone,
-    mesh: mesh,
+    bone: mesh,
+    geo: geo,
   };
 }
 
@@ -275,8 +282,14 @@ function GrowBranch(branch, year, opts) {
   var tip = branch[tipIndex];
   var newNode = Node(tip.depth, lopts);
   branch.push(newNode);
+
   newNode.index = branch.length;
+
+  // Currently hard-coded to match parameters given to geometry constructors.
+  newNode.bone.position.y = 1;//lopts.spacing;
   tip.bone.add(newNode.bone);
+
+  //newNode.bone.scale.set(1.0 - lopts.growth, 1.0, 1.0 - lopts.growth);
 
   if (rand.nextFloat() < lopts.jitterFreq && newNode.index > lopts.minJitterIndex) {
     newNode.bone.rotation.x = randomBetween(-lopts.jitterDirection, lopts.jitterDirection);
@@ -285,6 +298,22 @@ function GrowBranch(branch, year, opts) {
 
   // Trend up/downwards
   newNode.bone.rotation.z += lopts.trend;
+
+
+  // Generate leaves
+  /*
+  for (var i = 0; i < lopts.numberOfLeaves; i++) {
+    // TODO interesting that this affects tree shape,
+    //      because it's consuming random numbers that would otherwise
+    //      be used to shape the branches/nodes.
+    var color = new THREE.Color();
+    color.setHSL(0, rand.nextFloat(), rand.nextFloat() + 0.2);
+    newNode.leaves.push({
+      vertex: randomVector().setLength(lopts.leafDistance),
+      //color: color,
+    })
+  }
+  */
 
   for (var i = 0; i < branch.length; i++) {
     GrowNode(branch[i], year, opts)
@@ -296,9 +325,22 @@ function GrowNode(n, year, opts) {
   var bopts = opts.levels[n.depth + 1];
   n.age += 1;
 
-  // Scale up the mesh over time, growing slowly with each year.
-  //n.mesh.scale.multiplyScalar(1.0 + lopts.growth, 1, 1.0 + lopts.growth);
-  n.mesh.scale.multiply(new THREE.Vector3(1.0 + lopts.growth, 1, 1.0 + lopts.growth));
+  n.geo.scale(1.0 + lopts.growth, 1.0, 1.0 + lopts.growth);//1.0 + opts.growth, 1.0, 1.0 + opts.growth);
+
+  //newNode.bone.scale.set(1.0 - lopts.growth, 1.0, 1.0 - lopts.growth);
+
+/*
+  // Diminish the leaves with age
+  if (n.leaves.length > 0) {
+    if (n.age > 7) {
+      n.leaves.length = 0;
+    } else if (n.age > 3) {
+      n.leaves.length -= Math.floor(rand.nextFloat() * 0.3 * n.leaves.length);
+    }
+  }
+
+*/
+
 
   // Decide whether to create a new branch at this node.
   if (
@@ -317,11 +359,13 @@ function GrowNode(n, year, opts) {
   ) {
 
     var newNode = Node(n.depth + 1, bopts);
+    n.bone.add(newNode.bone);
+    //newNode.bone.scale.set(bopts.thickness, bopts.thickness);
+    //newNode.bone.scale.set(0, 0, 0);
     newNode.bone.rotation.y = randomBetween(0, Math.PI * 2)
     newNode.bone.rotation.z = (Math.PI / 2) + randomBetween(bopts.upness - 0.2, bopts.upness + 0.2);
 
     n.branches.push([newNode]);
-    n.bone.add(newNode.bone);
   }
 
   for (var j = 0; j < n.branches.length; j++) {
@@ -335,6 +379,24 @@ function GrowNode(n, year, opts) {
 // Utilities
 /****************************************************************************/
 
+
+
+function randomVector() {
+  return new THREE.Vector3(
+    rand.nextFloat() * 2 - 1,
+    rand.nextFloat() * 2 - 1,
+    rand.nextFloat() * 2 - 1);
+}
+
+function randomAngle() {
+  return rand.nextFloat() * Math.PI * 2;
+}
+
+function randomBetween(min, max) {
+  var range = max - min;
+  var r = rand.nextFloat();
+  return min + (range * r);
+}
 
 function jitterDirection(x, y, z) {
     return [
@@ -356,7 +418,6 @@ function jitterShape(shape, amt) {
   }
 }
 
-
 function visitNodes(branch, f) {
   for (var i = 0; i < branch.length; i++) {
     f(branch[i]);
@@ -367,6 +428,33 @@ function visitNodes(branch, f) {
     }
   }
 }
+
+function collectBones(branch, bones) {
+  for (var i = 0; i < branch.length; i++) {
+    bones.push(branch[i].bone);
+  }
+  for (var i = 0; i < branch.length; i++) {
+    for (var j = 0; j < branch[i].branches.length; j++) {
+      collectBones(branch[i].branches[j], bones);
+    }
+  }
+}
+
+function collectSkeletons(branch, branches, allBones) {
+  var bones = [];
+  for (var i = 0; i < branch.length; i++) {
+    bones.push(branch[i].bone);
+    allBones.push(branch[i].bone);
+  }
+  branches.push(bones);
+
+  for (var i = 0; i < branch.length; i++) {
+    for (var j = 0; j < branch[i].branches.length; j++) {
+      collectSkeletons(branch[i].branches[j], branches, allBones)
+    }
+  }
+}
+
 
 
 function createSkeletonMesh(count, opts, material) {
@@ -432,6 +520,32 @@ function createSkeletonMesh(count, opts, material) {
   */
 
 
+/**
+ * Creates a pseudo-random value generator. The seed must be an integer.
+ *
+ * Uses an optimized version of the Park-Miller PRNG.
+ * http://www.firstpr.com.au/dsp/rand31/
+ */
+function Random(seed) {
+  this._seed = seed % 2147483647;
+  if (this._seed <= 0) this._seed += 2147483646;
+}
+
+/**
+ * Returns a pseudo-random value between 1 and 2^32 - 2.
+ */
+Random.prototype.next = function () {
+  return this._seed = this._seed * 16807 % 2147483647;
+};
+
+
+/**
+ * Returns a pseudo-random floating point number in range [0, 1).
+ */
+Random.prototype.nextFloat = function (opt_minOrMax, opt_max) {
+  // We know that result of next() will be 1 to 2147483646 (inclusive).
+  return (this.next() - 1) / 2147483646;
+};
 
 // Clean up if reloading saved page.
 function cleanup() {

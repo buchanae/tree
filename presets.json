@@ -1,0 +1,78 @@
+{
+  "preset": "one",
+  "closed": false,
+  "remembered": {
+    "Default": {
+      "0": {
+        "rotate": true,
+        "render": true,
+        "wireframe": false,
+        "years": 54.448264182895855,
+        "shapeDivisions": 6,
+        "trunkThickness": 1.2802709568162574,
+        "firstThickness": 0.3048264182895851,
+        "secondThickness": 0.08806096528365792,
+        "trunkGrowth": 0.021473327688399664,
+        "firstGrowth": 0.009551227773073667,
+        "secondGrowth": 0.001964436917866215,
+        "upness": 0.08,
+        "seed": 11,
+        "jitterShape": 0,
+        "jitterDirection": 0.01,
+        "minJitterIndex": 3,
+        "maxBranchDepth": 2,
+        "minBranchIndex": 4,
+        "maxBranchAge": 20,
+        "minBranchAge": 1,
+        "branchChance": 0.28077900084674007,
+        "color": "#874242",
+        "leafColor": "#00ff00",
+        "leafDistance": 5,
+        "drawLeaves": false,
+        "numberOfLeaves": 5
+      }
+    },
+    "one": {
+      "0": {
+        "rotate": true,
+        "render": true,
+        "wireframe": false,
+        "years": 52.302286198137175,
+        "shapeDivisions": 6,
+        "trunkThickness": 1.2802709568162574,
+        "firstThickness": 0.3048264182895851,
+        "secondThickness": 0.08806096528365792,
+        "trunkGrowth": 0.021473327688399664,
+        "firstGrowth": 0.009551227773073667,
+        "secondGrowth": 0.001964436917866215,
+        "upness": 0.04,
+        "seed": 11,
+        "jitterShape": 0,
+        "jitterDirection": 0.01,
+        "minJitterIndex": 3,
+        "maxBranchDepth": 2,
+        "minBranchIndex": 4,
+        "maxBranchAge": 20,
+        "minBranchAge": 1,
+        "branchChance": 0.28077900084674007,
+        "color": "#874242",
+        "leafColor": "#00ff00",
+        "leafDistance": 5,
+        "drawLeaves": false,
+        "numberOfLeaves": 5
+      }
+    }
+  },
+  "folders": {
+    "Controls": {
+      "preset": "Default",
+      "closed": true,
+      "folders": {}
+    },
+    "Leaves": {
+      "preset": "Default",
+      "closed": true,
+      "folders": {}
+    }
+  }
+}
