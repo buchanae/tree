@@ -91,7 +91,7 @@ function Renderer() {
   light.castShadow = true;            // default false
   lightG.rotation.y = 0.8
   setInterval(function() {
-    lightG.rotation.y += 0.03
+    lightG.rotation.y += 0.008
   }, 30)
   lightG.add(light)
   root.add( lightG );
@@ -123,7 +123,7 @@ function Renderer() {
   //tree.add( sphere );
 
   var planeGeometry = new THREE.PlaneBufferGeometry( 2000, 2000, 32, 32 );
-  var planeMaterial = new THREE.MeshStandardMaterial( { color: 0x00ff00 } )
+  var planeMaterial = new THREE.MeshLambertMaterial( { color: 0x008000 } )
   var plane = new THREE.Mesh( planeGeometry, planeMaterial );
   plane.receiveShadow = true;
   plane.rotation.x = Math.PI * -0.5
