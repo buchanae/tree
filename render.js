@@ -26,7 +26,7 @@ function Renderer() {
   }
   this.geometries = {
     cylinder: new THREE.CylinderBufferGeometry(1, 1, 1, 15, 2, false),
-    sphere: new THREE.SphereBufferGeometry(1, 1, 1),
+    sphere: new THREE.SphereBufferGeometry(1, 10, 10),
     box: new THREE.BoxBufferGeometry(1, 1, 1),
   }
   this.mat = new THREE.ShaderMaterial({
@@ -74,15 +74,33 @@ function Renderer() {
   var tree = new THREE.Group()
   tree.scale.set(0.5, 0.5, 0.5)
 
-  var camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.1, 10000 )
-  var lookat = new THREE.Vector3(0, 50, 0)
+  var camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.1, 2000000 )
+  var lookat = new THREE.Vector3(0, 150, 0)
   this.lookat = lookat
   camera.position.y = 100 * scale
-  camera.position.z = 300 * scale
+  camera.position.z = 450 * scale
 
   scene.add(tree)
   root.add( new THREE.AmbientLight( 0xffffff, 0.4) );
 
+  var sky = new THREE.Sky();
+  sky.scale.setScalar( 45000 );
+
+  var uniforms = sky.material.uniforms;
+  uniforms.turbidity.value = 10
+  uniforms.rayleigh.value = 2
+  uniforms.luminance.value = 1
+  uniforms.mieCoefficient.value = 0.005
+  uniforms.mieDirectionalG.value = 0.8
+  var inclination = 0.27 // elevation / inclination
+  var azimuth = 0.0955 // Facing front,
+  var theta = Math.PI * ( inclination - 0.5 );
+  var phi = 2 * Math.PI * ( azimuth - 0.5 );
+  var distance = 400000;
+  uniforms.sunPosition.value.x = distance * Math.cos( phi );
+  uniforms.sunPosition.value.y = distance * Math.sin( phi ) * Math.sin( theta );
+  uniforms.sunPosition.value.z = distance * Math.sin( phi ) * Math.cos( theta );
+  scene.add( sky )
 
   //Create a DirectionalLight and turn on shadows for the light
   var lightG = new THREE.Group()
@@ -99,10 +117,10 @@ function Renderer() {
   //Set up shadow properties for the light
   light.shadow.mapSize.width = 2000;  // default
   light.shadow.mapSize.height = 2000; // default
-  light.shadow.camera.top = 150
-  light.shadow.camera.right = 150
-  light.shadow.camera.left = -150
-  light.shadow.camera.bottom = -10
+  light.shadow.camera.top = 250
+  light.shadow.camera.right = 250
+  light.shadow.camera.left = -250
+  light.shadow.camera.bottom = -20
   light.shadow.camera.near = 0.01;    // default
   light.shadow.camera.far = 5000;     // default
   //light.shadow.bias = 0.001
@@ -122,7 +140,7 @@ function Renderer() {
   sphere.receiveShadow = false;
   //tree.add( sphere );
 
-  var planeGeometry = new THREE.PlaneBufferGeometry( 2000, 2000, 32, 32 );
+  var planeGeometry = new THREE.PlaneBufferGeometry( 20000, 20000, 32, 32 );
   var planeMaterial = new THREE.MeshLambertMaterial( { color: 0x008000 } )
   var plane = new THREE.Mesh( planeGeometry, planeMaterial );
   plane.receiveShadow = true;

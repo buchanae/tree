@@ -58,7 +58,7 @@ function Main() {
       geo: Geometries.box,
       seed: j,
       thickness: 25,
-      height: 1,
+      height: 2,
       offset: 0,
       minBranchAge: 55,
       branchChance: 1.9,
@@ -74,7 +74,7 @@ function Main() {
       grow(sub[i], {
         seed: j + i,
         geo: Geometries.box,
-        height: 2,
+        height: 1,
         offset: 0,
         thickness: 5,
         minBranchAge: 25,
@@ -124,8 +124,9 @@ function grow(branch, opts) {
   var sub = []
   var rand = new Random(opts.seed)
   var curve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3( 0.5, 0, 0 ),
-    new THREE.Vector3( 0.2, 50, 0 ),
+    new THREE.Vector3( 0.6, 0, 0 ),
+    new THREE.Vector3( 0.5, 50, 0 ),
+    new THREE.Vector3( 0.2, 90, 0 ),
     new THREE.Vector3( 0.01,  100, 0 )
   ])
 
@@ -216,11 +217,20 @@ function leaves(branch, opts) {
       rand.Range(-opts.jamt.y, opts.jamt.y),
       rand.Range(-opts.jamt.z, opts.jamt.z))
     
-    scale(g.local, j, j, 4, 4, 4)
+    if (rand.Chance(0.003)) {
+      scale(g.local, j, j, 7, 7, 7)
+      g.geometry = Geometries.sphere
 
-    g.color[cj] = 0
-    g.color[cj + 1] = 1
-    g.color[cj + 2] = 0
+      g.color[cj] = 0.9
+      g.color[cj + 1] = 0
+      g.color[cj + 2] = 0
+    } else {
+      scale(g.local, j, j, 4, 4, 4)
+
+      g.color[cj] = 0
+      g.color[cj + 1] = rand.Range(0.8, 1)
+      g.color[cj + 2] = 0
+    }
 
     var k = Math.floor(
       rand.Range(
