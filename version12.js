@@ -14,25 +14,96 @@ var Materials = {
 // Global options controlling the simulation.
 var Options = {
   // Total years to simulate growth.
-  years: 300,
+  years: 150,
 }
 
-function Group(length) {
-  this.geometry = Geometries.box
+function Trunk(seed, length) {
+  this.geometry = Geometries.cylinder
   this.material = Materials.default
   this.length = length
+  var rand = new Random(seed)
 
   this.local = new Float32Array(length * 16)
   this.transform = new Float32Array(length * 16)
-  identity(this.transform, 0)
   this.color = new Float32Array(length * 3)
+
+  this.path = new THREE.CatmullRomCurve3([
+    new THREE.Vector3( 0, 0, 0 ),
+    new THREE.Vector3( 0, 10, 0 ),
+    new THREE.Vector3( -50, 290, 30 ),
+    new THREE.Vector3( 50, 600, 0 ),
+    new THREE.Vector3( 0, 700, 0 ),
+  ])
+  this.path.tension = 0.1
+
+  this.thickness = new THREE.SplineCurve([
+    new THREE.Vector2( 45, 0),
+    new THREE.Vector2( 22, 100 ),
+    new THREE.Vector2( 20, 300 ),
+    new THREE.Vector2( 1, 700 ),
+  ])
+
+  //var frames = this.path.computeFrenetFrames(length, false)
+  //console.log(frames)
+
+  var p = new THREE.Vector3()
+  var q = new THREE.Quaternion()
+  var up = new THREE.Vector3(0, 1, 0)
+  var baseThickness = 25
+
+  for (var i = 0; i < length; i++) {
+    var j = i * 16
+    var thickness = this.thickness.getPointAt(i / length).x
+
+    var cj = i * 3
+    this.color[cj] = 0.9
+    this.color[cj + 1] = 0.6
+    this.color[cj + 2] = 0.35
+
+    identity(this.transform, j)
+    identity(this.local, j)
+
+    var tan = this.path.getTangentAt(i / length)
+    q.setFromUnitVectors(tan, up)
+    var rot = quatrot(q.x, q.y, q.z, q.w)
+
+    multiply2(this.local, rot, 0, j)
+    scale(this.local, j, j, thickness, 5, thickness)
+
+    this.path.getPointAt(i / length, p)
+    translate(this.transform, j, j, p.x, p.y, p.z)
+
+    if (i / length > .5 && rand.Chance(0.05)) {
+      console.log("branch")
+    }
+  }
+
+  this.curve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3( 0.6, 0, 0 ),
+    new THREE.Vector3( 0.5, 50, 0 ),
+    new THREE.Vector3( 0.2, 90, 0 ),
+    new THREE.Vector3( 0.01,  100, 0 )
+  ])
+
+  Object.assign(this, {
+    thickness: 25,
+    height: 5,
+    offset: 0,
+    minBranchAge: 55,
+    //branchChance: 1.9,
+    branchChance: 0,
+    upness: 0.3,
+    jitChance: 0.3,
+    jamt: 1.7,
+    djamt: 0.03,
+  })
 }
 
 Main()
 function Main() {
   var renderer = new Renderer()
   var branches = []
-  var genLeaves = true
+  var genLeaves = false //true
 
   var loc = [
     0, 0,
@@ -47,62 +118,11 @@ function Main() {
 
   // Generate multiple trees
   for (let j = 0; j < 1; j++) {
-    var trunk = new Group(Options.years)
+    var trunk = new Trunk(j, Options.years)
     branches.push(trunk)
 
     // Set the position of the tree
     translate(trunk.transform, 0, 0, loc[j * 2], 0, loc[j * 2+ 1] )
-
-    // Grow the trunk, and get the trunks branches
-    let sub = grow(trunk, {
-      geo: Geometries.box,
-      seed: j,
-      thickness: 25,
-      height: 2,
-      offset: 0,
-      minBranchAge: 55,
-      branchChance: 1.9,
-      //branchChance: 0,
-      upness: 0.3,
-      jitChance: 0,
-      jamt: 1.7,
-      djamt: 0.03,
-    })
-
-    // Grow the trunk's branches
-    for (let i = 0; i < sub.length; i++) {
-      grow(sub[i], {
-        seed: j + i,
-        geo: Geometries.box,
-        height: 1,
-        offset: 0,
-        thickness: 5,
-        minBranchAge: 25,
-        branchChance: 0,
-        trend: -0.003,
-        upness: 0.3,
-        jitChance: 0.2,
-        jamt: 0.1,
-        djamt: 0.03,
-      })
-      branches.push(sub[i])
-
-      // Generate leaves.
-      if (genLeaves) {
-        var l = leaves(sub[i], {
-          seed: j + i + 1,
-          count: Math.floor(sub[i].length * 3),
-          geo: Geometries.box,
-          jamt: {
-            x: 100,
-            y: 0,
-            z: 10,
-          },
-          size: 8,
-        })
-        branches.push(l)
-      }
-    }
   }
 
   // For performance profiling in Chrome devtools
@@ -119,16 +139,9 @@ function Main() {
   console.timeEnd("render")
 }
 
-function grow(branch, opts) {
-  branch.geometry = opts.geo
+function grow(branch) {
   var sub = []
-  var rand = new Random(opts.seed)
-  var curve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3( 0.6, 0, 0 ),
-    new THREE.Vector3( 0.5, 50, 0 ),
-    new THREE.Vector3( 0.2, 90, 0 ),
-    new THREE.Vector3( 0.01,  100, 0 )
-  ])
+  var rand = new Random(branch.seed)
 
   for (var i = 0; i < branch.length; i++) {
 
@@ -142,13 +155,13 @@ function grow(branch, opts) {
     var age = i
     var b = branch
     var perc = age / branch.length
-    var thickness = opts.thickness * (1 - perc)
+    var thickness = branch.thickness * (1 - perc)
 
     // Initialize local transform to identity matrix
-    identity(b.local, j)
+    //identity(b.local, j)
 
     // Scale the local mesh size
-    scale(b.local, j, j, thickness, opts.height, thickness)
+    //scale(b.local, j, j, thickness, 1, thickness)
 
     // There's no parent of the first node, so there's nothing to project below.
     if (i == 0) {
@@ -156,45 +169,46 @@ function grow(branch, opts) {
     }
 
     // Clone parent transform
-    clone(b.transform, b.transform, pj, j)
+    //clone(b.transform, b.transform, pj, j)
 
     // Trend branches up/downward
-    if (opts.trend) {
-      rotateX(b.transform, j, j, opts.trend)
+    if (branch.trend) {
+      //rotateX(b.transform, j, j, branch.trend)
     }
 
     // Jitter branch direction
-    if (age > 10 && rand.Chance(opts.jitChance)) {
-      rotateX(b.transform, j, j, rand.Range(-opts.djamt, opts.djamt))
+    if (age > 10 && rand.Chance(branch.jitChance)) {
+      //rotateX(b.transform, j, j, rand.Range(-branch.djamt, branch.djamt))
       //rotateY(b.transform, j, j, rand.Range(-0.08, 0.08))
-      rotateZ(b.transform, j, j, rand.Range(-opts.djamt, opts.djamt))
+      //rotateZ(b.transform, j, j, rand.Range(-branch.djamt, branch.djamt))
     }
 
     // Node height
-    translate(b.transform, j, j, 0, opts.height + opts.offset, 0)
+    //translate(b.transform, j, j, 0, branch.height + branch.offset, 0)
 
     // Jitter node position
-    if (rand.Chance(opts.jitChance)) {
-      translate(b.transform, j, j,
-        rand.Range(-opts.jamt, opts.jamt),
-        0,
-        rand.Range(-opts.jamt, opts.jamt)
-      )
+    if (rand.Chance(branch.jitChance)) {
+      //translate(b.transform, j, j,
+        //rand.Range(-branch.jamt, branch.jamt),
+        //0,
+        //rand.Range(-branch.jamt, branch.jamt)
+      //)
     }
 
     // Generate branches
-    if (age > opts.minBranchAge && 
+    if (age > branch.minBranchAge && 
         rand.Chance(perc) && 
-        rand.Chance(opts.branchChance)) {
+        rand.Chance(branch.branchChance)) {
 
-      var z = curve.getPointAt(perc)
+      var z = branch.curve.getPointAt(perc)
       var length = Math.floor(
         Math.max(0, branch.length * z.x + rand.Range(-10, 10)))
 
-      var g = new Group(length)
-      clone(b.transform, g.transform, j, 0)
-      rotateY(g.transform, 0, 0, rand.Angle())
-      rotateX(g.transform, 0, 0, Math.PI / 2 - opts.upness)
+      var g = new Branch(length)
+      g.thickness = g.thickness * (1 - perc)
+      //clone(b.transform, g.transform, j, 0)
+      //rotateY(g.transform, 0, 0, rand.Angle())
+      //rotateX(g.transform, 0, 0, Math.PI / 2 - branch.upness)
       sub.push(g)
     }
   }

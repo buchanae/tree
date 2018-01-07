@@ -134,6 +134,56 @@ function multiply(m, src, dst, b) {
   m[dst + 14] = z02 * b03 + z12 * b13 + z22 * b23 + z32 * b33
   m[dst + 15] = z03 * b03 + z13 * b13 + z23 * b23 + z33 * b33
 }
+function multiply2(m, n, src, dst) {
+  var b30 = m[dst + 12]
+  var b02 = m[dst + 2]
+  var b03 = m[dst + 3]
+  var b20 = m[dst + 8]
+  var b21 = m[dst + 9]
+  var b12 = m[dst + 6]
+  var b13 = m[dst + 7]
+  var b11 = m[dst + 5]
+  var b22 = m[dst + 10]
+  var b32 = m[dst + 14]
+  var b23 = m[dst + 11]
+  var b33 = m[dst + 15]
+  var b31 = m[dst + 13]
+  var b10 = m[dst + 4]
+  var b01 = m[dst + 1]
+  var b00 = m[dst + 0]
+  var z12 = n[src + 6]
+  var z22 = n[src + 10]
+  var z33 = n[src + 15]
+  var z00 = n[src + 0]
+  var z32 = n[src + 14]
+  var z30 = n[src + 12]
+  var z21 = n[src + 9]
+  var z02 = n[src + 2]
+  var z23 = n[src + 11]
+  var z10 = n[src + 4]
+  var z20 = n[src + 8]
+  var z01 = n[src + 1]
+  var z11 = n[src + 5]
+  var z31 = n[src + 13]
+  var z03 = n[src + 3]
+  var z13 = n[src + 7]
+  m[dst + 0] = z00 * b00 + z10 * b10 + z20 * b20 + z30 * b30
+  m[dst + 1] = z01 * b00 + z11 * b10 + z21 * b20 + z31 * b30
+  m[dst + 2] = z02 * b00 + z12 * b10 + z22 * b20 + z32 * b30
+  m[dst + 3] = z03 * b00 + z13 * b10 + z23 * b20 + z33 * b30
+  m[dst + 4] = z00 * b01 + z10 * b11 + z20 * b21 + z30 * b31
+  m[dst + 5] = z01 * b01 + z11 * b11 + z21 * b21 + z31 * b31
+  m[dst + 6] = z02 * b01 + z12 * b11 + z22 * b21 + z32 * b31
+  m[dst + 7] = z03 * b01 + z13 * b11 + z23 * b21 + z33 * b31
+  m[dst + 8] = z00 * b02 + z10 * b12 + z20 * b22 + z30 * b32
+  m[dst + 9] = z01 * b02 + z11 * b12 + z21 * b22 + z31 * b32
+  m[dst + 10] = z02 * b02 + z12 * b12 + z22 * b22 + z32 * b32
+  m[dst + 11] = z03 * b02 + z13 * b12 + z23 * b22 + z33 * b32
+  m[dst + 12] = z00 * b03 + z10 * b13 + z20 * b23 + z30 * b33
+  m[dst + 13] = z01 * b03 + z11 * b13 + z21 * b23 + z31 * b33
+  m[dst + 14] = z02 * b03 + z12 * b13 + z22 * b23 + z32 * b33
+  m[dst + 15] = z03 * b03 + z13 * b13 + z23 * b23 + z33 * b33
+}
 
 function clone(m, n, src, dst) {
   n[dst + 0] = m[src + 0]
@@ -181,4 +231,35 @@ function dumpMatrix(m, j) {
     [m[8], m[9], m[10], m[11]].join(" "),
     [m[12], m[13], m[14], m[15]].join(" "),
   ].join("\n"))
+}
+
+function quatrot(X, Y, Z, W) {
+  var mat = []
+    xx      = X * X;
+    xy      = X * Y;
+    xz      = X * Z;
+    xw      = X * W;
+
+    yy      = Y * Y;
+    yz      = Y * Z;
+    yw      = Y * W;
+
+    zz      = Z * Z;
+    zw      = Z * W;
+
+    mat[0]  = 1 - 2 * ( yy + zz );
+    mat[1]  =     2 * ( xy - zw );
+    mat[2]  =     2 * ( xz + yw );
+
+    mat[4]  =     2 * ( xy + zw );
+    mat[5]  = 1 - 2 * ( xx + zz );
+    mat[6]  =     2 * ( yz - xw );
+
+    mat[8]  =     2 * ( xz - yw );
+    mat[9]  =     2 * ( yz + xw );
+    mat[10] = 1 - 2 * ( xx + yy );
+
+    mat[3]  = mat[7] = mat[11] = mat[12] = mat[13] = mat[14] = 0;
+    mat[15] = 1;
+  return mat
 }

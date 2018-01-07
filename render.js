@@ -73,15 +73,16 @@ function Renderer() {
   //root.scale.set(scale, scale, scale)
   var tree = new THREE.Group()
   tree.scale.set(0.5, 0.5, 0.5)
+  //tree.rotation.y = Math.PI / 2
 
   var camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.1, 2000000 )
   var lookat = new THREE.Vector3(0, 150, 0)
   this.lookat = lookat
   camera.position.y = 100 * scale
-  camera.position.z = 450 * scale
+  camera.position.z = 380 * scale
 
   scene.add(tree)
-  root.add( new THREE.AmbientLight( 0xffffff, 0.4) );
+  root.add( new THREE.AmbientLight( 0xffffff, 0.2) );
 
   var sky = new THREE.Sky();
   sky.scale.setScalar( 45000 );
@@ -104,12 +105,12 @@ function Renderer() {
 
   //Create a DirectionalLight and turn on shadows for the light
   var lightG = new THREE.Group()
-  var light = new THREE.DirectionalLight( 0xffffff, 0.6 );
+  var light = new THREE.DirectionalLight( 0xffffff, 0.9 );
   light.position.set( 0, 50, 40 ); 			//default; light shining from top
   light.castShadow = true;            // default false
   lightG.rotation.y = 0.8
   setInterval(function() {
-    lightG.rotation.y += 0.008
+    //lightG.rotation.y += 0.008
   }, 30)
   lightG.add(light)
   root.add( lightG );
@@ -122,7 +123,7 @@ function Renderer() {
   light.shadow.camera.left = -250
   light.shadow.camera.bottom = -20
   light.shadow.camera.near = 0.01;    // default
-  light.shadow.camera.far = 5000;     // default
+  light.shadow.camera.far = 2000;     // default
   //light.shadow.bias = 0.001
 
   dirLightShadowMapViewer = new THREE.ShadowMapViewer( light );
@@ -238,6 +239,7 @@ Renderer.prototype.Render = function(groups) {
     if (camera.position.z < 10) {
       camera.position.z = 10
     }
+    animate()
   })
 
   this.container.addEventListener("mousemove", function(e) {
@@ -264,6 +266,7 @@ Renderer.prototype.Render = function(groups) {
         lookat.y += dy * dragYMult
       }
 
+      animate()
       previous = e
     }
   })
@@ -275,7 +278,7 @@ Renderer.prototype.Render = function(groups) {
   var lookat = this.lookat
 
   function animate() {
-    requestAnimationFrame(animate)
+    //requestAnimationFrame(animate)
     renderer.render(scene, camera)
     this.dirLightShadowMapViewer.render(renderer)
     camera.lookAt(lookat)
