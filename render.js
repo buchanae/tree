@@ -106,7 +106,7 @@ function Renderer() {
   //Create a DirectionalLight and turn on shadows for the light
   var lightG = new THREE.Group()
   var light = new THREE.DirectionalLight( 0xffffff, 0.9 );
-  light.position.set( 0, 50, 40 ); 			//default; light shining from top
+  light.position.set( 40, 50, 30 ); 			//default; light shining from top
   light.castShadow = true;            // default false
   lightG.rotation.y = 0.8
   setInterval(function() {
@@ -123,7 +123,7 @@ function Renderer() {
   light.shadow.camera.left = -250
   light.shadow.camera.bottom = -20
   light.shadow.camera.near = 0.01;    // default
-  light.shadow.camera.far = 2000;     // default
+  light.shadow.camera.far = 1000000;     // default
   //light.shadow.bias = 0.001
 
   dirLightShadowMapViewer = new THREE.ShadowMapViewer( light );
@@ -133,13 +133,6 @@ function Renderer() {
   dirLightShadowMapViewer.size.height = 256;
   dirLightShadowMapViewer.update(); //Required when setting position or size directly
   this.dirLightShadowMapViewer = dirLightShadowMapViewer;
-
-  var sphereGeometry = new THREE.SphereBufferGeometry( 500, 32, 32 );
-  //var sphereMaterial = new THREE.MeshLambertMaterial( { color: 0xff0000 } );
-  var sphere = new THREE.Mesh( sphereGeometry, this.mat );
-  sphere.castShadow = true;
-  sphere.receiveShadow = false;
-  //tree.add( sphere );
 
   var planeGeometry = new THREE.PlaneBufferGeometry( 20000, 20000, 32, 32 );
   var planeMaterial = new THREE.MeshLambertMaterial( { color: 0x008000 } )
@@ -154,10 +147,70 @@ function Renderer() {
 
   camera.lookAt(this.lookat)
   this.renderer.render(scene, camera)
+
+  var dragging = false
+  var previous = null
+  var scrollMult = 2
+  var dragXMult = 0.1
+  var dragYMult = 0.5
+  var that = this
+
+  this.container.addEventListener("mousedown", function(e) {
+    dragging = true
+    previous = e
+  })
+  this.container.addEventListener("mouseup", function() {
+    dragging = false
+    previous = null
+  })
+  this.container.addEventListener("mouseout", function() {
+    dragging = false
+    previous = null
+  })
+
+  this.container.addEventListener("mousewheel", function(e) {
+    e.preventDefault()
+    camera.position.z += Math.sign(e.deltaY) * scrollMult
+    if (camera.position.z < 10) {
+      camera.position.z = 10
+    }
+    that._draw()
+  })
+
+  this.container.addEventListener("mousemove", function(e) {
+    if (dragging) {
+
+      if (previous == null) {
+        previous = e
+        return
+      }
+
+      var dx = e.screenX - previous.screenX
+      var dy = e.screenY - previous.screenY
+
+      var direction
+      if (Math.abs(dy) > Math.abs(dx)) {
+        direction = "y"
+      } else {
+        direction = "x"
+      }
+
+      if (direction == "x") {
+        tree.rotation.y += dx * dragXMult
+      } else {
+        lookat.y += dy * dragYMult
+      }
+
+      that._draw()
+      previous = e
+    }
+  })
 }
 
 
 Renderer.prototype.Render = function(groups) {
+
+  this.tree.remove.apply(this.tree, this.tree.children);
 
   var insts = []
 
@@ -177,7 +230,7 @@ Renderer.prototype.Render = function(groups) {
     var color = new THREE.InstancedBufferAttribute(group.color, 3)
     inst.addAttribute("color", color)
 
-    var transform = new THREE.InstancedInterleavedBuffer(group.transform, 16)
+    var transform = new THREE.InstancedInterleavedBuffer(group.global, 16)
     // THREE has no support for a mat4 vertex attribute, so have to hack it
     // into four separate vec4s
     inst.addAttribute("transform1",
@@ -207,82 +260,24 @@ Renderer.prototype.Render = function(groups) {
     mesh.frustumCulled = false
     mesh.castShadow = true
     //mesh.receiveShadow = true
-    mesh.customDepthMaterial = this.depthMat
+    //mesh.customDepthMaterial = this.depthMat
 
     this.tree.add(mesh)
   }
 
   this.tree.frustumCulled = false
 
-  var dragging = false
-  var previous = null
-  var scrollMult = 2
-  var dragXMult = 0.1
-  var dragYMult = 0.5
-
-  this.container.addEventListener("mousedown", function(e) {
-    dragging = true
-    previous = e
-  })
-  this.container.addEventListener("mouseup", function() {
-    dragging = false
-    previous = null
-  })
-  this.container.addEventListener("mouseout", function() {
-    dragging = false
-    previous = null
-  })
-
-  this.container.addEventListener("mousewheel", function(e) {
-    e.preventDefault()
-    camera.position.z += Math.sign(e.deltaY) * scrollMult
-    if (camera.position.z < 10) {
-      camera.position.z = 10
-    }
-    animate()
-  })
-
-  this.container.addEventListener("mousemove", function(e) {
-    if (dragging) {
-
-      if (previous == null) {
-        previous = e
-        return
-      }
-
-      var dx = e.screenX - previous.screenX
-      var dy = e.screenY - previous.screenY
-
-      var direction
-      if (Math.abs(dy) > Math.abs(dx)) {
-        direction = "y"
-      } else {
-        direction = "x"
-      }
-
-      if (direction == "x") {
-        tree.rotation.y += dx * dragXMult
-      } else {
-        lookat.y += dy * dragYMult
-      }
-
-      animate()
-      previous = e
-    }
-  })
-
-  var renderer = this.renderer
-  var scene = this.scene
-  var tree = this.tree
-  var camera = this.camera
-  var lookat = this.lookat
-
-  function animate() {
+  var that = this
+  //function animate() {
     //requestAnimationFrame(animate)
-    renderer.render(scene, camera)
-    this.dirLightShadowMapViewer.render(renderer)
-    camera.lookAt(lookat)
-  }
-  animate()
+    //that._draw()
+  //}
+  this._draw()
+}
+
+Renderer.prototype._draw = function() {
+  this.renderer.render(this.scene, this.camera)
+  this.dirLightShadowMapViewer.render(this.renderer)
+  this.camera.lookAt(this.lookat)
 }
 
